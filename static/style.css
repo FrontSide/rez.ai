@@ -250,7 +250,7 @@ button[type="submit"]:hover {
 /* narrow image on the left, all recipe content on the right */
 .recipe-layout {
   display: grid;
-  grid-template-columns: 150px 1fr;
+  grid-template-columns: 220px 1fr;
   gap: 2rem;
   align-items: start;
 }
