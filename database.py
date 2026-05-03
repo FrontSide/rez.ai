@@ -1,9 +1,13 @@
+import os
+
 from sqlalchemy import create_engine, Column, String, JSON, DateTime, Integer
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from datetime import datetime, timezone
 
+_DB_URL = os.getenv("DATABASE_URL", "sqlite:///recipes.db")
+
 engine = create_engine(
-    "sqlite:///recipes.db",
+    _DB_URL,
     connect_args={"check_same_thread": False},
     json_serializer=lambda obj: __import__("json").dumps(obj, ensure_ascii=False),
 )

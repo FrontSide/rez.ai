@@ -1,0 +1,11 @@
+services:
+  rez-ai:
+    build: .
+    container_name: rez-ai
+    restart: 'unless-stopped'
+    ports:
+      - "8090:8000"
+    volumes:
+      - /home/david/data/rez.ai:/app/data
+    environment:
+      - DATABASE_URL=sqlite:////app/data/recipes.db
