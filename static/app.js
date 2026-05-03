@@ -135,24 +135,23 @@ function renderRecipe(r) {
   recipeSection.innerHTML = `
     <button class="recipe-back" onclick="goBack()">← Back to results</button>
 
-    <div class="recipe-header">
+    <div class="recipe-layout">
       ${r.image_url ? `<img class="recipe-side-img" src="${escHtml(r.image_url)}" alt="${escHtml(r.title)}" />` : ""}
-      <div class="recipe-header-content">
+      <div class="recipe-content">
         <span class="recipe-source-badge">${sourceLabel(r.source)}</span>
         <h1 class="recipe-title">${escHtml(r.title)}</h1>
         ${r.description ? `<p class="recipe-description">${escHtml(r.description)}</p>` : ""}
         ${metaBar}
-      </div>
-    </div>
-
-    <div class="recipe-columns">
-      <div>
-        <span class="recipe-section-title">Ingredients</span>
-        <ul class="ingredients-list">${ingredients || "<li>No ingredients found.</li>"}</ul>
-      </div>
-      <div>
-        <span class="recipe-section-title">Method</span>
-        <ol class="method-list">${steps || "<li>No method found.</li>"}</ol>
+        <div class="recipe-columns">
+          <div>
+            <span class="recipe-section-title">Ingredients</span>
+            <ul class="ingredients-list">${ingredients || "<li>No ingredients found.</li>"}</ul>
+          </div>
+          <div>
+            <span class="recipe-section-title">Method</span>
+            <ol class="method-list">${steps || "<li>No method found.</li>"}</ol>
+          </div>
+        </div>
       </div>
     </div>
   `;
