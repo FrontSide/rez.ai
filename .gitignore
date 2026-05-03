@@ -1,0 +1,19 @@
+# virtual environments
+.venv/
+bin/
+include/
+lib/
+lib64
+pyvenv.cfg
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# database
+*.db
+*.sqlite3
+
+# env
+.env

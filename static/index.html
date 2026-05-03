@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>rez.ai</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header id="site-header">
+    <a href="/" id="logo" onclick="showHome(); return false;">rez.ai</a>
+    <form id="search-form" onsubmit="handleSearch(event)">
+      <input
+        id="search-input"
+        type="search"
+        placeholder="Search recipes…"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button type="submit">Search</button>
+    </form>
+  </header>
+
+  <main id="main">
+    <!-- Hero (shown when no search has been made) -->
+    <section id="hero">
+      <h1>Find any recipe,<br />beautifully presented.</h1>
+      <p>Search millions of recipes from BBC Good Food and more.</p>
+      <form onsubmit="handleSearch(event)">
+        <input
+          class="hero-input"
+          type="search"
+          placeholder="Try "pasta carbonara" or "chocolate cake"…"
+          oninput="document.getElementById('search-input').value = this.value"
+          autocomplete="off"
+        />
+        <button type="submit">Find recipes</button>
+      </form>
+    </section>
+
+    <!-- Search results -->
+    <section id="results-section" hidden>
+      <h2 id="results-heading"></h2>
+      <div id="results-grid"></div>
+    </section>
+
+    <!-- Recipe detail -->
+    <article id="recipe-section" hidden></article>
+  </main>
+
+  <div id="toast" hidden></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
