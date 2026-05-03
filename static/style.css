@@ -8,7 +8,7 @@
   --muted:     #666;
   --shadow:    4px 4px 0 #1a1a1a;
   --shadow-lg: 6px 6px 0 #1a1a1a;
-  --serif:     Georgia, 'Palatino Linotype', Palatino, 'Times New Roman', serif;
+  --hand:      'Caveat', cursive;
 }
 
 body {
@@ -34,7 +34,7 @@ body {
 }
 
 #logo {
-  font-family: var(--serif);
+  font-family: var(--hand);
   font-size: 1.35rem;
   color: var(--ink);
   text-decoration: none;
@@ -95,7 +95,7 @@ button[type="submit"]:hover {
   padding: 5rem 1rem 4rem;
 }
 #hero h1 {
-  font-family: var(--serif);
+  font-family: var(--hand);
   font-size: clamp(2.4rem, 5vw, 3.8rem);
   font-weight: normal;
   line-height: 1.2;
@@ -123,7 +123,7 @@ button[type="submit"]:hover {
 
 /* ── results ───────────────────────────────────────────────── */
 #results-heading {
-  font-family: var(--serif);
+  font-family: var(--hand);
   font-size: 1.05rem;
   color: var(--muted);
   margin-bottom: 1.5rem;
@@ -195,7 +195,7 @@ button[type="submit"]:hover {
   color: var(--muted);
 }
 .card-title {
-  font-family: var(--serif);
+  font-family: var(--hand);
   font-size: 1.05rem;
   font-weight: 700;
   line-height: 1.35;
@@ -237,7 +237,7 @@ button[type="submit"]:hover {
   display: inline-flex;
   align-items: center;
   gap: .35rem;
-  font-family: var(--serif);
+  font-family: var(--hand);
   font-size: 1rem;
   color: var(--muted);
   cursor: pointer;
@@ -284,7 +284,7 @@ button[type="submit"]:hover {
 }
 
 .recipe-title {
-  font-family: var(--serif);
+  font-family: var(--hand);
   font-size: clamp(1.9rem, 4vw, 2.7rem);
   font-weight: normal;
   line-height: 1.2;
@@ -292,7 +292,7 @@ button[type="submit"]:hover {
 }
 
 .recipe-description {
-  font-family: var(--serif);
+  font-family: var(--hand);
   font-size: 1.05rem;
   line-height: 1.7;
   color: var(--muted);
@@ -321,7 +321,7 @@ button[type="submit"]:hover {
   color: var(--muted);
 }
 .meta-value {
-  font-family: var(--serif);
+  font-family: var(--hand);
   font-size: 1rem;
   font-weight: 700;
 }
@@ -337,7 +337,7 @@ button[type="submit"]:hover {
 }
 
 .recipe-section-title {
-  font-family: var(--serif);
+  font-family: var(--hand);
   font-size: 1.15rem;
   font-weight: normal;
   margin-bottom: 1rem;
@@ -353,7 +353,7 @@ button[type="submit"]:hover {
   gap: 0;
 }
 .ingredients-list li {
-  font-family: var(--serif);
+  font-family: var(--hand);
   font-size: 1rem;
   padding: .45rem 0 .45rem 1.6rem;
   position: relative;
@@ -389,7 +389,7 @@ button[type="submit"]:hover {
   border: 2px solid var(--ink);
   background: transparent;
   color: var(--ink);
-  font-family: var(--serif);
+  font-family: var(--hand);
   font-size: .9rem;
   font-weight: 700;
   display: flex;
@@ -398,7 +398,7 @@ button[type="submit"]:hover {
   margin-top: .15rem;
 }
 .step-text {
-  font-family: var(--serif);
+  font-family: var(--hand);
   font-size: 1rem;
   line-height: 1.7;
 }
@@ -413,7 +413,7 @@ button[type="submit"]:hover {
   color: var(--surface);
   padding: .6rem 1.2rem;
   border: 2px solid var(--ink);
-  font-family: var(--serif);
+  font-family: var(--hand);
   font-size: .95rem;
   z-index: 999;
   pointer-events: none;
