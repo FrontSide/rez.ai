@@ -9,10 +9,28 @@ const recipeSection  = document.getElementById("recipe-section");
 const searchInput    = document.getElementById("search-input");
 const toast          = document.getElementById("toast");
 
-/* ── startup ───────────────────────────────────────────────── */
-document.addEventListener("DOMContentLoaded", loadFeatured);
+/* ── routing ───────────────────────────────────────────────── */
+document.addEventListener("DOMContentLoaded", () => routeFromURL());
+window.addEventListener("popstate", () => routeFromURL());
 
-async function loadFeatured() {
+function routeFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const recipe = params.get("recipe");
+  const q      = params.get("q");
+
+  if (recipe) {
+    loadRecipe(recipe, false);
+  } else if (q) {
+    searchInput.value = q;
+    showResults(q, false);
+  } else {
+    loadFeatured(false);
+  }
+}
+
+/* ── startup / featured ────────────────────────────────────── */
+async function loadFeatured(push = true) {
+  if (push) history.pushState({}, "", location.pathname);
   currentQuery = "";
   searchInput.value = "";
   recipeSection.hidden = true;
@@ -35,11 +53,13 @@ async function handleSearch(e) {
   e.preventDefault();
   const q = searchInput.value.trim();
   if (!q) return;
-  currentQuery = q;
-  showResults(q);
+  showResults(q, true);
 }
 
-async function showResults(q) {
+async function showResults(q, push = true) {
+  if (push) history.pushState({}, "", `?q=${encodeURIComponent(q)}`);
+  currentQuery = q;
+  searchInput.value = q;
   recipeSection.hidden = true;
   resultsSection.hidden = false;
   resultsHeading.innerHTML = `Results for <span>"${escHtml(q)}"</span>`;
@@ -93,11 +113,12 @@ resultsGrid.addEventListener("click", e => {
   const card = e.target.closest("[data-recipe-url]");
   if (!card) return;
   e.preventDefault();
-  loadRecipe(card.dataset.recipeUrl);
+  loadRecipe(card.dataset.recipeUrl, true);
 });
 
 /* ── recipe detail ─────────────────────────────────────────── */
-async function loadRecipe(url) {
+async function loadRecipe(url, push = true) {
+  if (push) history.pushState({}, "", `?recipe=${encodeURIComponent(url)}`);
   resultsSection.hidden = true;
   recipeSection.hidden = false;
   recipeSection.innerHTML = renderRecipeSkeleton();
@@ -109,7 +130,7 @@ async function loadRecipe(url) {
     renderRecipe(recipe);
   } catch (err) {
     recipeSection.innerHTML = `
-      <button class="recipe-back" onclick="goBack()">← Back</button>
+      <button class="recipe-back" onclick="history.back()">← Back</button>
       <p class="error">Failed to load recipe: ${escHtml(String(err))}</p>
     `;
   }
@@ -150,7 +171,7 @@ function renderRecipe(r) {
   `).join("");
 
   recipeSection.innerHTML = `
-    <button class="recipe-back" onclick="goBack()">← Back to results</button>
+    <button class="recipe-back" onclick="history.back()">← Back to results</button>
 
     <div class="recipe-layout">
       ${r.image_url ? `<img class="recipe-side-img" src="${escHtml(r.image_url)}" alt="${escHtml(r.title)}" />` : ""}
@@ -184,13 +205,6 @@ function renderRecipeSkeleton() {
     <div class="skeleton skeleton-line" style="height:1rem;margin-bottom:.5rem"></div>
     <div class="skeleton skeleton-line short" style="height:1rem;margin-bottom:2rem"></div>
   `;
-}
-
-/* ── navigation ────────────────────────────────────────────── */
-function goBack() {
-  recipeSection.hidden = true;
-  resultsSection.hidden = false;
-  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 /* ── utils ─────────────────────────────────────────────────── */
