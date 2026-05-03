@@ -22,14 +22,8 @@ body {
 
 /* ── header ────────────────────────────────────────────────── */
 #site-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
   background: var(--surface);
   border-bottom: 3px solid var(--ink);
-  display: flex;
-  align-items: center;
-  gap: 1rem;
   padding: .7rem 1.5rem;
 }
 
@@ -38,14 +32,13 @@ body {
   font-size: 1.35rem;
   color: var(--ink);
   text-decoration: none;
-  flex-shrink: 0;
 }
 
 #search-form {
   display: flex;
-  flex: 1;
-  max-width: 540px;
+  max-width: 600px;
   gap: .5rem;
+  margin-bottom: 1.25rem;
 }
 
 /* ── inputs + buttons ──────────────────────────────────────── */

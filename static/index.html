@@ -12,21 +12,21 @@
 <body>
   <header id="site-header">
     <a href="/" id="logo" onclick="loadFeatured(); return false;">rez.ai</a>
-    <form id="search-form" onsubmit="handleSearch(event)">
-      <input
-        id="search-input"
-        type="search"
-        placeholder="Search recipes…"
-        autocomplete="off"
-        spellcheck="false"
-      />
-      <button type="submit">Search</button>
-    </form>
   </header>
 
   <main id="main">
     <!-- Search results -->
     <section id="results-section" hidden>
+      <form id="search-form" onsubmit="handleSearch(event)">
+        <input
+          id="search-input"
+          type="search"
+          placeholder="Search recipes…"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button type="submit">Search</button>
+      </form>
       <h2 id="results-heading"></h2>
       <div id="results-grid"></div>
     </section>
