@@ -261,8 +261,7 @@ button[type="submit"]:hover {
   width: 100%;
   aspect-ratio: 3/4;
   object-fit: cover;
-  border: 2px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--ink);
+  border: 1px solid #ccc;
   display: block;
   position: sticky;
   top: 4.5rem;
