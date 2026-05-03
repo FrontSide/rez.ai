@@ -23,7 +23,6 @@ body {
 /* ── header ────────────────────────────────────────────────── */
 #site-header {
   background: var(--surface);
-  border-bottom: 3px solid var(--ink);
   padding: .7rem 1.5rem;
 }
 
