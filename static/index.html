@@ -11,7 +11,7 @@
 </head>
 <body>
   <header id="site-header">
-    <a href="/" id="logo" onclick="showHome(); return false;">rez.ai</a>
+    <a href="/" id="logo" onclick="loadFeatured(); return false;">rez.ai</a>
     <form id="search-form" onsubmit="handleSearch(event)">
       <input
         id="search-input"
@@ -25,22 +25,6 @@
   </header>
 
   <main id="main">
-    <!-- Hero (shown when no search has been made) -->
-    <section id="hero">
-      <h1>Find any recipe,<br />beautifully presented.</h1>
-      <p>Search millions of recipes from BBC Good Food and more.</p>
-      <form onsubmit="handleSearch(event)">
-        <input
-          class="hero-input"
-          type="search"
-          placeholder="Try "pasta carbonara" or "chocolate cake"…"
-          oninput="document.getElementById('search-input').value = this.value"
-          autocomplete="off"
-        />
-        <button type="submit">Find recipes</button>
-      </form>
-    </section>
-
     <!-- Search results -->
     <section id="results-section" hidden>
       <h2 id="results-heading"></h2>

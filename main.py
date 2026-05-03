@@ -21,6 +21,25 @@ app = FastAPI(title="rez.ai", lifespan=lifespan)
 
 # --- API routes (must be registered before static mount) ---
 
+_FEATURED_QUERIES = ["pasta", "chicken", "chocolate cake", "salad"]
+
+@app.get("/api/featured")
+async def featured_recipes():
+    tasks = [asyncio.to_thread(bbc_good_food.search, q) for q in _FEATURED_QUERIES]
+    results_lists = await asyncio.gather(*tasks, return_exceptions=True)
+
+    seen: set[str] = set()
+    combined: list[dict] = []
+    max_len = max((len(r) for r in results_lists if isinstance(r, list)), default=0)
+    for i in range(max_len):
+        for r in results_lists:
+            if isinstance(r, list) and i < len(r) and r[i]["url"] not in seen:
+                seen.add(r[i]["url"])
+                combined.append(r[i])
+
+    return {"results": combined[:12]}
+
+
 @app.get("/api/search")
 async def search_recipes(q: str = Query(..., min_length=1)):
     try:

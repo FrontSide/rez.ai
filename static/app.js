@@ -2,7 +2,6 @@
 let currentQuery = "";
 
 /* ── elements ──────────────────────────────────────────────── */
-const hero           = document.getElementById("hero");
 const resultsSection = document.getElementById("results-section");
 const resultsHeading = document.getElementById("results-heading");
 const resultsGrid    = document.getElementById("results-grid");
@@ -10,18 +9,37 @@ const recipeSection  = document.getElementById("recipe-section");
 const searchInput    = document.getElementById("search-input");
 const toast          = document.getElementById("toast");
 
+/* ── startup ───────────────────────────────────────────────── */
+document.addEventListener("DOMContentLoaded", loadFeatured);
+
+async function loadFeatured() {
+  currentQuery = "";
+  searchInput.value = "";
+  recipeSection.hidden = true;
+  resultsSection.hidden = false;
+  resultsHeading.innerHTML = "Popular recipes";
+  renderSkeletons();
+
+  try {
+    const res = await fetch("api/featured");
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    renderCards(data.results);
+  } catch (err) {
+    resultsGrid.innerHTML = `<p class="error">Could not load featured recipes: ${escHtml(String(err))}</p>`;
+  }
+}
+
 /* ── search ────────────────────────────────────────────────── */
 async function handleSearch(e) {
   e.preventDefault();
-  const q = searchInput.value.trim() || e.target.querySelector("input").value.trim();
+  const q = searchInput.value.trim();
   if (!q) return;
-  searchInput.value = q;
   currentQuery = q;
   showResults(q);
 }
 
 async function showResults(q) {
-  hero.hidden = true;
   recipeSection.hidden = true;
   resultsSection.hidden = false;
   resultsHeading.innerHTML = `Results for <span>"${escHtml(q)}"</span>`;
@@ -80,7 +98,6 @@ resultsGrid.addEventListener("click", e => {
 
 /* ── recipe detail ─────────────────────────────────────────── */
 async function loadRecipe(url) {
-  hero.hidden = true;
   resultsSection.hidden = true;
   recipeSection.hidden = false;
   recipeSection.innerHTML = renderRecipeSkeleton();
@@ -92,7 +109,7 @@ async function loadRecipe(url) {
     renderRecipe(recipe);
   } catch (err) {
     recipeSection.innerHTML = `
-      <button class="recipe-back" onclick="showHome()">← Back</button>
+      <button class="recipe-back" onclick="goBack()">← Back</button>
       <p class="error">Failed to load recipe: ${escHtml(String(err))}</p>
     `;
   }
@@ -161,7 +178,7 @@ function renderRecipe(r) {
 
 function renderRecipeSkeleton() {
   return `
-    <div class="skeleton skeleton-img" style="width:100%;max-height:420px;border-radius:10px;margin-bottom:1.75rem;aspect-ratio:16/7"></div>
+    <div class="skeleton skeleton-img" style="width:100%;max-height:420px;margin-bottom:1.75rem;aspect-ratio:16/7"></div>
     <div class="skeleton skeleton-line short" style="height:1.5rem;margin-bottom:.5rem"></div>
     <div class="skeleton skeleton-line" style="height:2.5rem;margin-bottom:1rem"></div>
     <div class="skeleton skeleton-line" style="height:1rem;margin-bottom:.5rem"></div>
@@ -169,21 +186,11 @@ function renderRecipeSkeleton() {
   `;
 }
 
-/* ── navigation helpers ────────────────────────────────────── */
+/* ── navigation ────────────────────────────────────────────── */
 function goBack() {
-  if (currentQuery) {
-    showResults(currentQuery);
-  } else {
-    showHome();
-  }
-}
-
-function showHome() {
-  hero.hidden = false;
-  resultsSection.hidden = true;
   recipeSection.hidden = true;
-  searchInput.value = "";
-  currentQuery = "";
+  resultsSection.hidden = false;
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 /* ── utils ─────────────────────────────────────────────────── */
