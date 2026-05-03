@@ -8,7 +8,7 @@
   --muted:     #666;
   --shadow:    4px 4px 0 #1a1a1a;
   --shadow-lg: 6px 6px 0 #1a1a1a;
-  --hand:      'Patrick Hand', cursive;
+  --hand:      'Architects Daughter', cursive;
 }
 
 body {
@@ -291,7 +291,6 @@ button[type="submit"]:hover {
 }
 
 .recipe-description {
-  font-family: var(--hand);
   font-size: 1.05rem;
   line-height: 1.7;
   color: var(--muted);
@@ -320,7 +319,6 @@ button[type="submit"]:hover {
   color: var(--muted);
 }
 .meta-value {
-  font-family: var(--hand);
   font-size: 1rem;
 }
 
@@ -351,7 +349,6 @@ button[type="submit"]:hover {
   gap: 0;
 }
 .ingredients-list li {
-  font-family: var(--hand);
   font-size: 1.2rem;
   padding: .45rem 0 .45rem 1.6rem;
   position: relative;
@@ -395,7 +392,6 @@ button[type="submit"]:hover {
   margin-top: .15rem;
 }
 .step-text {
-  font-family: var(--hand);
   font-size: 1.2rem;
   line-height: 1.7;
 }
