@@ -100,9 +100,11 @@ function toggleAuthMode(e) {
 async function signInWith(provider) {
   const sb = await getSupabase();
   if (!sb) return;
+  const appRoot = window.location.origin +
+    window.location.pathname.replace(/\/$/, "").replace(/\/cookbook$/, "") + "/";
   await sb.auth.signInWithOAuth({
     provider,
-    options: { redirectTo: window.location.origin + window.location.pathname },
+    options: { redirectTo: appRoot },
   });
 }
 
