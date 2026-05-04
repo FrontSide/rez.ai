@@ -5,13 +5,14 @@ let _authMode = "signin"; // "signin" | "signup"
 async function getSupabase() {
   if (_supabase) return _supabase;
   const res = await fetch("api/config");
-  const { supabase_url, supabase_anon_key } = await res.json();
+  const data = await res.json();
+  const { supabase_url, supabase_anon_key, version } = data;
   if (!supabase_url || !supabase_anon_key) {
     console.warn("Supabase not configured — auth disabled");
     return null;
   }
   const vEl = document.getElementById("version-label");
-  if (vEl && data.version) vEl.textContent = `v${data.version}`;
+  if (vEl && version) vEl.textContent = `v${version}`;
   _supabase = supabase.createClient(supabase_url, supabase_anon_key);
   return _supabase;
 }
