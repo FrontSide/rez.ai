@@ -335,7 +335,7 @@ function renderRecipe(r) {
     <div class="recipe-layout">
       ${r.image_url ? `<img class="recipe-side-img" src="${escHtml(r.image_url)}" alt="${escHtml(r.title)}" />` : ""}
       <div class="recipe-content">
-        <span class="recipe-source-badge">${sourceLabel(r.source)}</span>
+        <a class="recipe-source-badge" href="${escHtml(r.url)}" target="_blank" rel="noopener noreferrer">Recipe from: ${sourceLabel(r.source)} ↗</a>
         <h1 class="recipe-title">${escHtml(r.title)}</h1>
         ${r.description ? `<p class="recipe-description">${escHtml(r.description)}</p>` : ""}
         ${metaBar}

@@ -532,7 +532,9 @@ button[type="submit"]:hover {
   letter-spacing: .1em;
   color: var(--muted);
   margin-bottom: .4rem;
+  text-decoration: none;
 }
+a.recipe-source-badge:hover { color: var(--ink); }
 
 .recipe-title {
   font-family: var(--hand);
@@ -609,12 +611,12 @@ button[type="submit"]:hover {
 }
 .ingredients-list li:last-child { border-bottom: none; }
 .ingredients-list li::before {
-  content: "☐";
+  content: "–";
   position: absolute;
   left: 0;
   font-size: .85rem;
   line-height: 1.7;
-  color: var(--ink);
+  color: #bbb;
 }
 
 .method-list {
@@ -630,18 +632,11 @@ button[type="submit"]:hover {
 }
 .step-number {
   flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  border: 2px solid var(--ink);
-  background: transparent;
   color: var(--ink);
   font-family: var(--hand);
-  font-size: .9rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 1.2rem;
   margin-top: .15rem;
+  min-width: 1.5rem;
 }
 .step-text {
   font-size: 1.2rem;
