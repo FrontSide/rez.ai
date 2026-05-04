@@ -61,11 +61,20 @@ The backend never stores passwords or talks to Supabase at request time. Supabas
 
 ## Deployment
 
+Merging a PR into `main` automatically triggers a deployment via GitHub Actions (`.github/workflows/deploy.yml`). The workflow runs on a self-hosted runner installed on the production server, pulls the latest code, and rebuilds the Docker container.
+
+**Flow:**
+1. Open a PR from a feature branch
+2. Review and merge into `main`
+3. GitHub Actions runs on the self-hosted runner → `git pull` + `docker compose up -d --build`
+4. Confirm the new version number in the bottom-left corner of the app
+
+**Manual deploy** (if needed):
 ```bash
-docker compose up -d
+ssh david@192.168.178.162 "cd ~/rez.ai && git pull && docker compose up -d --build"
 ```
 
-The compose file expects `SUPABASE_URL` and `SUPABASE_ANON_KEY` to be present in the environment (or a `.env` file in the same directory). Recipe data is persisted to `/home/david/data/rez.ai` on the host.
+The compose file expects `SUPABASE_URL` and `SUPABASE_ANON_KEY` to be present in a `.env` file in the project directory on the server. Recipe data is persisted to `/home/david/data/rez.ai` on the host.
 
 ## API
 
