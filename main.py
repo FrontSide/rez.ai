@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from urllib.parse import unquote
 
 from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from auth import require_user
@@ -136,6 +137,13 @@ async def get_config():
         "supabase_anon_key": os.getenv("SUPABASE_ANON_KEY", ""),
         "version":           version,
     }
+
+
+# --- SPA routes (serve index.html for all client-side paths) ---
+
+@app.get("/cookbook")
+async def serve_cookbook():
+    return FileResponse("static/index.html")
 
 
 # --- static files ---
