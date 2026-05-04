@@ -611,12 +611,12 @@ a.recipe-source-badge:hover { color: var(--ink); }
 }
 .ingredients-list li:last-child { border-bottom: none; }
 .ingredients-list li::before {
-  content: "☐";
+  content: "–";
   position: absolute;
   left: 0;
   font-size: .85rem;
   line-height: 1.7;
-  color: var(--ink);
+  color: #bbb;
 }
 
 .method-list {
