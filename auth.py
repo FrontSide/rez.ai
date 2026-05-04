@@ -41,7 +41,7 @@ async def _decode(token: str) -> dict:
         raise JWTError(f"No matching signing key (kid={kid})")
 
     public_key = jwk.construct(matching[0])
-    return jwt.decode(token, public_key, algorithms=["RS256"], audience="authenticated")
+    return jwt.decode(token, public_key, algorithms=["ES256"], audience="authenticated")
 
 
 async def require_user(

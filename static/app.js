@@ -1,13 +1,16 @@
 /* ── state ─────────────────────────────────────────────────── */
 let currentQuery = "";
+let _savedUrls   = new Set(); // urls saved by the current user
 
 /* ── elements ──────────────────────────────────────────────── */
-const resultsSection = document.getElementById("results-section");
-const resultsHeading = document.getElementById("results-heading");
-const resultsGrid    = document.getElementById("results-grid");
-const recipeSection  = document.getElementById("recipe-section");
-const searchInput    = document.getElementById("search-input");
-const toast          = document.getElementById("toast");
+const resultsSection  = document.getElementById("results-section");
+const resultsHeading  = document.getElementById("results-heading");
+const resultsGrid     = document.getElementById("results-grid");
+const recipeSection   = document.getElementById("recipe-section");
+const cookbookSection = document.getElementById("cookbook-section");
+const cookbookGrid    = document.getElementById("cookbook-grid");
+const searchInput     = document.getElementById("search-input");
+const toast           = document.getElementById("toast");
 
 /* ── routing ───────────────────────────────────────────────── */
 document.addEventListener("DOMContentLoaded", () => routeFromURL());
@@ -15,6 +18,7 @@ window.addEventListener("popstate", () => routeFromURL());
 
 function routeFromURL() {
   const params = new URLSearchParams(window.location.search);
+  const path   = window.location.pathname.replace(/\/$/, "");
   const recipe = params.get("recipe");
   const q      = params.get("q");
 
@@ -23,26 +27,103 @@ function routeFromURL() {
   } else if (q) {
     searchInput.value = q;
     showResults(q, false);
+  } else if (path === "/cookbook") {
+    showCookbook(false);
   } else {
     loadFeatured(false);
   }
 }
 
+function navigate(section) {
+  if (section === "cookbook") {
+    history.pushState({}, "", "/cookbook");
+    showCookbook(false);
+  } else {
+    history.pushState({}, "", "/");
+    loadFeatured(false);
+  }
+}
+
+function _setActiveNav(section) {
+  document.getElementById("nav-explore").classList.toggle("active", section === "explore");
+  document.getElementById("nav-cookbook").classList.toggle("active", section === "cookbook");
+}
+
+function _hideAll() {
+  resultsSection.hidden  = true;
+  recipeSection.hidden   = true;
+  cookbookSection.hidden = true;
+}
+
+/* ── saved state ───────────────────────────────────────────── */
+async function _loadSavedUrls() {
+  const sb = await getSupabase();
+  if (!sb) return;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+
+  try {
+    const res = await fetch("api/saves", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    _savedUrls = new Set(data.results.map(r => r.url));
+  } catch { /* silently ignore */ }
+}
+
+async function toggleSave(url, btn) {
+  const sb = await getSupabase();
+  if (!sb) { openAuthModal(); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { openAuthModal(); return; }
+
+  const isSaved = _savedUrls.has(url);
+  const method  = isSaved ? "DELETE" : "POST";
+
+  try {
+    const res = await fetch(`api/saves?url=${encodeURIComponent(url)}`, {
+      method,
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (res.status === 401) { openAuthModal(); return; }
+    if (!res.ok) throw new Error();
+    if (isSaved) {
+      _savedUrls.delete(url);
+    } else {
+      _savedUrls.add(url);
+    }
+    _updateBookmarkBtn(btn, !isSaved);
+    showToast(isSaved ? "Removed from cookbook" : "Saved to cookbook");
+  } catch {
+    showToast("Could not update cookbook");
+  }
+}
+
+function _updateBookmarkBtn(btn, saved) {
+  if (!btn) return;
+  btn.classList.toggle("saved", saved);
+  btn.title = saved ? "Remove from cookbook" : "Save to cookbook";
+  btn.textContent = saved ? "★" : "☆";
+}
+
 /* ── startup / featured ────────────────────────────────────── */
 async function loadFeatured(push = true) {
-  if (push) history.pushState({}, "", location.pathname);
+  if (push) history.pushState({}, "", "/");
+  _setActiveNav("explore");
   currentQuery = "";
   searchInput.value = "";
-  recipeSection.hidden = true;
+  _hideAll();
   resultsSection.hidden = false;
   resultsHeading.innerHTML = "Popular recipes";
-  renderSkeletons();
+  renderSkeletons(resultsGrid);
+  await _loadSavedUrls();
 
   try {
     const res = await fetch("api/featured");
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
-    renderCards(data.results);
+    renderCards(resultsGrid, data.results);
   } catch (err) {
     resultsGrid.innerHTML = `<p class="error">Could not load featured recipes: ${escHtml(String(err))}</p>`;
   }
@@ -58,25 +139,68 @@ async function handleSearch(e) {
 
 async function showResults(q, push = true) {
   if (push) history.pushState({}, "", `?q=${encodeURIComponent(q)}`);
+  _setActiveNav("explore");
   currentQuery = q;
   searchInput.value = q;
-  recipeSection.hidden = true;
+  _hideAll();
   resultsSection.hidden = false;
   resultsHeading.innerHTML = `Results for <span>"${escHtml(q)}"</span>`;
-  renderSkeletons();
+  renderSkeletons(resultsGrid);
+  await _loadSavedUrls();
 
   try {
     const res = await fetch(`api/search?q=${encodeURIComponent(q)}`);
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
-    renderCards(data.results);
+    renderCards(resultsGrid, data.results);
   } catch (err) {
     resultsGrid.innerHTML = `<p class="error">Search failed: ${escHtml(String(err))}</p>`;
   }
 }
 
-function renderSkeletons() {
-  resultsGrid.innerHTML = Array.from({ length: 8 }, () => `
+/* ── cookbook ──────────────────────────────────────────────── */
+async function showCookbook(push = true) {
+  if (push) history.pushState({}, "", "/cookbook");
+  _setActiveNav("cookbook");
+  _hideAll();
+  cookbookSection.hidden = false;
+
+  const sb = await getSupabase();
+  if (!sb) { _showCookbookAuthPrompt(); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { _showCookbookAuthPrompt(); return; }
+
+  renderSkeletons(cookbookGrid);
+  await _loadSavedUrls();
+
+  try {
+    const res = await fetch("api/saves", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    if (!data.results.length) {
+      cookbookGrid.innerHTML = `<p class="cookbook-empty">No saved recipes yet — explore and click ☆ to add some.</p>`;
+    } else {
+      renderCards(cookbookGrid, data.results);
+    }
+  } catch (err) {
+    cookbookGrid.innerHTML = `<p class="error">Could not load cookbook: ${escHtml(String(err))}</p>`;
+  }
+}
+
+function _showCookbookAuthPrompt() {
+  cookbookGrid.innerHTML = `
+    <div class="cookbook-auth-prompt">
+      <p>Sign in to save recipes and build your personal cookbook.</p>
+      <button class="provider-btn" style="max-width:240px" onclick="openAuthModal()">Sign in</button>
+    </div>
+  `;
+}
+
+/* ── cards ─────────────────────────────────────────────────── */
+function renderSkeletons(grid) {
+  grid.innerHTML = Array.from({ length: 8 }, () => `
     <div class="skeleton-card">
       <div class="skeleton skeleton-img"></div>
       <div class="skeleton-body">
@@ -89,29 +213,45 @@ function renderSkeletons() {
   `).join("");
 }
 
-function renderCards(results) {
+function renderCards(grid, results) {
   if (!results.length) {
-    resultsGrid.innerHTML = `<p style="color:var(--muted)">No recipes found. Try a different search.</p>`;
+    grid.innerHTML = `<p style="color:var(--muted)">No recipes found. Try a different search.</p>`;
     return;
   }
-  resultsGrid.innerHTML = results.map(r => `
-    <a class="recipe-card" href="#" data-recipe-url="${escHtml(r.url)}">
-      ${r.image_url
-        ? `<img src="${escHtml(r.image_url)}" alt="${escHtml(r.title)}" loading="lazy" />`
-        : `<div class="card-img-placeholder">🍽️</div>`
-      }
-      <div class="card-body">
-        <span class="card-source">${sourceLabel(r.source)}</span>
-        <span class="card-title">${escHtml(r.title)}</span>
-        ${r.cook_time ? `<span class="card-meta">⏱ ${escHtml(r.cook_time)}</span>` : ""}
-      </div>
-    </a>
-  `).join("");
+  grid.innerHTML = results.map(r => {
+    const saved = _savedUrls.has(r.url);
+    return `
+      <a class="recipe-card" href="#" data-recipe-url="${escHtml(r.url)}">
+        ${r.image_url
+          ? `<img src="${escHtml(r.image_url)}" alt="${escHtml(r.title)}" loading="lazy" />`
+          : `<div class="card-img-placeholder">🍽️</div>`
+        }
+        <div class="card-body">
+          <span class="card-source">${sourceLabel(r.source)}</span>
+          <span class="card-title">${escHtml(r.title)}</span>
+          ${r.cook_time ? `<span class="card-meta">⏱ ${escHtml(r.cook_time)}</span>` : ""}
+        </div>
+        <button class="bookmark-btn${saved ? " saved" : ""}"
+          title="${saved ? "Remove from cookbook" : "Save to cookbook"}"
+          data-bookmark-url="${escHtml(r.url)}"
+          onclick="event.preventDefault(); event.stopPropagation(); toggleSave(this.dataset.bookmarkUrl, this)">
+          ${saved ? "★" : "☆"}
+        </button>
+      </a>
+    `;
+  }).join("");
 }
 
 resultsGrid.addEventListener("click", e => {
   const card = e.target.closest("[data-recipe-url]");
-  if (!card) return;
+  if (!card || e.target.closest(".bookmark-btn")) return;
+  e.preventDefault();
+  loadRecipe(card.dataset.recipeUrl, true);
+});
+
+cookbookGrid.addEventListener("click", e => {
+  const card = e.target.closest("[data-recipe-url]");
+  if (!card || e.target.closest(".bookmark-btn")) return;
   e.preventDefault();
   loadRecipe(card.dataset.recipeUrl, true);
 });
@@ -119,9 +259,10 @@ resultsGrid.addEventListener("click", e => {
 /* ── recipe detail ─────────────────────────────────────────── */
 async function loadRecipe(url, push = true) {
   if (push) history.pushState({}, "", `?recipe=${encodeURIComponent(url)}`);
-  resultsSection.hidden = true;
+  _hideAll();
   recipeSection.hidden = false;
   recipeSection.innerHTML = renderRecipeSkeleton();
+  await _loadSavedUrls();
 
   try {
     const res = await fetch(`api/recipe?url=${encodeURIComponent(url)}`);
@@ -138,6 +279,7 @@ async function loadRecipe(url, push = true) {
 
 function renderRecipe(r) {
   const meta = r.metadata || {};
+  const saved = _savedUrls.has(r.url);
 
   const metaItems = [
     { label: "Prep",     value: meta.prep_time },
@@ -159,10 +301,7 @@ function renderRecipe(r) {
     </div>
   ` : "";
 
-  const ingredients = (r.ingredients || []).map(i => `
-    <li>${escHtml(i)}</li>
-  `).join("");
-
+  const ingredients = (r.ingredients || []).map(i => `<li>${escHtml(i)}</li>`).join("");
   const steps = (r.method || []).map((step, i) => `
     <li class="method-step">
       <span class="step-number">${i + 1}</span>
@@ -171,7 +310,15 @@ function renderRecipe(r) {
   `).join("");
 
   recipeSection.innerHTML = `
-    <button class="recipe-back" onclick="history.back()">← Back to results</button>
+    <div class="recipe-topbar">
+      <button class="recipe-back" onclick="history.back()">← Back to results</button>
+      <button class="recipe-save-btn${saved ? " saved" : ""}"
+        title="${saved ? "Remove from cookbook" : "Save to cookbook"}"
+        data-bookmark-url="${escHtml(r.url)}"
+        onclick="toggleSave(this.dataset.bookmarkUrl, this)">
+        ${saved ? "★ Saved" : "☆ Save to Cookbook"}
+      </button>
+    </div>
 
     <div class="recipe-layout">
       ${r.image_url ? `<img class="recipe-side-img" src="${escHtml(r.image_url)}" alt="${escHtml(r.title)}" />` : ""}
@@ -217,9 +364,7 @@ function escHtml(str) {
 }
 
 function sourceLabel(source) {
-  const labels = {
-    bbc_good_food: "BBC Good Food",
-  };
+  const labels = { bbc_good_food: "BBC Good Food" };
   return labels[source] || source;
 }
 

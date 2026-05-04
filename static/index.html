@@ -11,7 +11,11 @@
 </head>
 <body>
   <header id="site-header">
-    <a href="/" id="logo" onclick="loadFeatured(); return false;">rez.ai</a>
+    <a href="/" id="logo" onclick="navigate('explore'); return false;">rez.ai</a>
+    <nav id="main-nav">
+      <a href="/" id="nav-explore" class="nav-link active" onclick="navigate('explore'); return false;">Explore</a>
+      <a href="/cookbook" id="nav-cookbook" class="nav-link" onclick="navigate('cookbook'); return false;">My Cookbook</a>
+    </nav>
     <div id="auth-area">
       <button id="auth-btn" onclick="openAuthModal()">Sign in</button>
       <div id="user-menu" hidden>
@@ -67,6 +71,12 @@
 
     <!-- Recipe detail -->
     <article id="recipe-section" hidden></article>
+
+    <!-- My Cookbook -->
+    <section id="cookbook-section" hidden>
+      <h2 id="cookbook-heading">My Cookbook</h2>
+      <div id="cookbook-grid"></div>
+    </section>
   </main>
 
   <div id="toast" hidden></div>

@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import create_engine, Column, String, JSON, DateTime, Integer
+from sqlalchemy import create_engine, Column, String, JSON, DateTime, Integer, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from datetime import datetime, timezone
 
@@ -31,6 +31,16 @@ class Recipe(Base):
     method = Column(JSON, default=list)
     metadata_ = Column("metadata", JSON, default=dict)
     scraped_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class SavedRecipe(Base):
+    __tablename__ = "saved_recipes"
+    __table_args__ = (UniqueConstraint("user_id", "recipe_url"),)
+
+    id        = Column(Integer, primary_key=True, autoincrement=True)
+    user_id   = Column(String, nullable=False, index=True)
+    recipe_url = Column(String, nullable=False)
+    saved_at  = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 def init_db():

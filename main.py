@@ -3,10 +3,11 @@ import os
 from contextlib import asynccontextmanager
 from urllib.parse import unquote
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 
-from database import Recipe, SessionLocal, init_db
+from auth import require_user
+from database import Recipe, SavedRecipe, SessionLocal, init_db
 from scraper import bbc_good_food
 
 
@@ -78,6 +79,50 @@ async def get_recipe(url: str = Query(...)):
         session.commit()
         session.refresh(recipe)
         return _to_dict(recipe, from_cache=False)
+
+
+@app.get("/api/saves")
+async def list_saves(user: dict = Depends(require_user)):
+    user_id = user["sub"]
+    with SessionLocal() as session:
+        rows = (
+            session.query(SavedRecipe, Recipe)
+            .join(Recipe, Recipe.url == SavedRecipe.recipe_url)
+            .filter(SavedRecipe.user_id == user_id)
+            .order_by(SavedRecipe.saved_at.desc())
+            .all()
+        )
+    return {"results": [_to_dict(recipe, from_cache=True) for _, recipe in rows]}
+
+
+@app.post("/api/saves")
+async def save_recipe(url: str = Query(...), user: dict = Depends(require_user)):
+    url = unquote(url)
+    user_id = user["sub"]
+    with SessionLocal() as session:
+        if not session.query(Recipe).filter(Recipe.url == url).first():
+            raise HTTPException(status_code=404, detail="Recipe not in cache — load it first")
+        existing = session.query(SavedRecipe).filter(
+            SavedRecipe.user_id == user_id, SavedRecipe.recipe_url == url
+        ).first()
+        if not existing:
+            session.add(SavedRecipe(user_id=user_id, recipe_url=url))
+            session.commit()
+    return {"saved": True}
+
+
+@app.delete("/api/saves")
+async def unsave_recipe(url: str = Query(...), user: dict = Depends(require_user)):
+    url = unquote(url)
+    user_id = user["sub"]
+    with SessionLocal() as session:
+        row = session.query(SavedRecipe).filter(
+            SavedRecipe.user_id == user_id, SavedRecipe.recipe_url == url
+        ).first()
+        if row:
+            session.delete(row)
+            session.commit()
+    return {"saved": False}
 
 
 @app.get("/api/config")
