@@ -12,7 +12,41 @@
 <body>
   <header id="site-header">
     <a href="/" id="logo" onclick="loadFeatured(); return false;">rez.ai</a>
+    <div id="auth-area">
+      <button id="auth-btn" onclick="openAuthModal()">Sign in</button>
+      <div id="user-menu" hidden>
+        <span id="user-email"></span>
+        <button id="sign-out-btn" onclick="signOut()">Sign out</button>
+      </div>
+    </div>
   </header>
+
+  <!-- Auth modal -->
+  <div id="auth-modal" hidden>
+    <div id="auth-modal-inner">
+      <button class="modal-close" onclick="closeAuthModal()">✕</button>
+      <h2 class="modal-title">Welcome to rez.ai</h2>
+
+      <div id="auth-providers">
+        <button class="provider-btn" onclick="signInWith('google')">Continue with Google</button>
+      </div>
+
+      <div class="auth-divider"><span>or</span></div>
+
+      <form id="email-auth-form" onsubmit="handleEmailAuth(event)">
+        <input id="auth-email" type="email" placeholder="Email" required autocomplete="email" />
+        <input id="auth-password" type="password" placeholder="Password" required autocomplete="current-password" />
+        <div id="auth-error" hidden></div>
+        <button type="submit" id="auth-submit">Sign in</button>
+      </form>
+
+      <p class="auth-toggle">
+        <span id="auth-toggle-text">Don't have an account?</span>
+        <a href="#" id="auth-toggle-link" onclick="toggleAuthMode(event)">Sign up</a>
+      </p>
+    </div>
+  </div>
+  <div id="auth-modal-backdrop" hidden onclick="closeAuthModal()"></div>
 
   <main id="main">
     <!-- Search results -->
@@ -37,6 +71,8 @@
 
   <div id="toast" hidden></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js" integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil" crossorigin="anonymous"></script>
+  <script src="auth.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

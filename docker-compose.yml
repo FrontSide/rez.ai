@@ -9,3 +9,5 @@ services:
       - /home/david/data/rez.ai:/app/data
     environment:
       - DATABASE_URL=sqlite:////app/data/recipes.db
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
