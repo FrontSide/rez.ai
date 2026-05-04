@@ -664,23 +664,19 @@ button[type="submit"]:hover {
   pointer-events: none;
 }
 
-/* ── footer ────────────────────────────────────────────────── */
+/* ── footer (version left, copyright right) ────────────────── */
 #site-footer {
-  text-align: center;
-  padding: 2rem 0 1.25rem;
-  font-size: .75rem;
-  color: #ccc;
-}
-
-/* ── version label ─────────────────────────────────────────── */
-#version-label {
-  position: fixed;
-  bottom: .6rem;
-  left: .8rem;
+  display: flex;
+  justify-content: space-between;
+  padding: 1.5rem 1.5rem .75rem;
   font-size: .7rem;
   color: #ccc;
-  pointer-events: none;
-  z-index: 50;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+#version-label {
+  color: #ccc;
 }
 
 /* ── utility ───────────────────────────────────────────────── */
