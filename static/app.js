@@ -299,7 +299,6 @@ function renderRecipe(r) {
     { label: "Total",    value: meta.total_time },
     { label: "Servings", value: Array.isArray(meta.servings) ? meta.servings[0] : meta.servings },
     { label: "Cuisine",  value: meta.cuisine },
-    { label: "Rating",   value: meta.rating ? `${Number(meta.rating).toFixed(1)} ★ (${meta.rating_count})` : null },
   ].filter(m => m.value);
 
   const metaBar = metaItems.length ? `
@@ -312,6 +311,14 @@ function renderRecipe(r) {
       `).join("")}
     </div>
   ` : "";
+
+  const tags = (meta.category || "")
+    .split(",").map(t => t.trim()).filter(Boolean)
+    .map(t => `<span class="recipe-tag">${escHtml(t)}</span>`).join("");
+
+  const ratingDisplay = meta.rating
+    ? `<span class="recipe-rating">★ ${Number(meta.rating).toFixed(1)} <span class="recipe-rating-count">(${Number(meta.rating_count || 0).toLocaleString()} ratings)</span></span>`
+    : "";
 
   const ingredients = (r.ingredients || []).map(i => `<li>${escHtml(i)}</li>`).join("");
   const steps = (r.method || []).map((step, i) => `
@@ -338,6 +345,8 @@ function renderRecipe(r) {
         <a class="recipe-source-badge" href="${escHtml(r.url)}" target="_blank" rel="noopener noreferrer">Recipe from: ${sourceLabel(r.source)} ↗</a>
         <h1 class="recipe-title">${escHtml(r.title)}</h1>
         ${r.description ? `<p class="recipe-description">${escHtml(r.description)}</p>` : ""}
+        ${ratingDisplay}
+        ${tags ? `<div class="recipe-tags">${tags}</div>` : ""}
         ${metaBar}
         <div class="recipe-columns">
           <div>
