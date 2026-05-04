@@ -1,5 +1,9 @@
 name: Deploy to production
 
+# SECURITY NOTE: this repo uses a self-hosted runner on a homelab server.
+# Only trigger on push to main (i.e. after a merge). NEVER add pull_request
+# as a trigger — that would allow arbitrary code execution on the server
+# from any external contributor's PR.
 on:
   push:
     branches:
