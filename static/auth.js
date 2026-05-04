@@ -24,7 +24,12 @@ async function getSupabase() {
 
   sb.auth.onAuthStateChange((_event, session) => {
     _applySession(session);
-    if (session) closeAuthModal();
+    if (session) {
+      closeAuthModal();
+      // Refresh cookbook if it's currently visible
+      const cookbook = document.getElementById("cookbook-section");
+      if (cookbook && !cookbook.hidden) showCookbook(false);
+    }
   });
 })();
 
