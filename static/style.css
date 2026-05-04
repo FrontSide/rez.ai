@@ -551,6 +551,35 @@ a.recipe-source-badge:hover { color: var(--ink); }
   margin-bottom: 1.5rem;
 }
 
+.recipe-rating {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: .6rem;
+}
+.recipe-rating-count {
+  font-weight: normal;
+  font-size: .85rem;
+  color: var(--muted);
+}
+
+.recipe-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-bottom: 1.25rem;
+}
+.recipe-tag {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--muted);
+  border: 1px solid #ddd;
+  padding: .2rem .55rem;
+}
+
 .recipe-meta-bar {
   display: flex;
   flex-wrap: wrap;
