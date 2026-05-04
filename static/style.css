@@ -532,7 +532,9 @@ button[type="submit"]:hover {
   letter-spacing: .1em;
   color: var(--muted);
   margin-bottom: .4rem;
+  text-decoration: none;
 }
+a.recipe-source-badge:hover { color: var(--ink); }
 
 .recipe-title {
   font-family: var(--hand);
