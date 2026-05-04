@@ -127,9 +127,14 @@ async def unsave_recipe(url: str = Query(...), user: dict = Depends(require_user
 
 @app.get("/api/config")
 async def get_config():
+    try:
+        version = open("VERSION").read().strip()
+    except OSError:
+        version = "unknown"
     return {
         "supabase_url":      os.getenv("SUPABASE_URL", ""),
         "supabase_anon_key": os.getenv("SUPABASE_ANON_KEY", ""),
+        "version":           version,
     }
 
 
