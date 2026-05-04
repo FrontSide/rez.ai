@@ -1,9 +1,9 @@
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from urllib.parse import unquote
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from database import Recipe, SessionLocal, init_db
@@ -78,6 +78,14 @@ async def get_recipe(url: str = Query(...)):
         session.commit()
         session.refresh(recipe)
         return _to_dict(recipe, from_cache=False)
+
+
+@app.get("/api/config")
+async def get_config():
+    return {
+        "supabase_url":      os.getenv("SUPABASE_URL", ""),
+        "supabase_anon_key": os.getenv("SUPABASE_ANON_KEY", ""),
+    }
 
 
 # --- static files ---
