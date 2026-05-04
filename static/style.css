@@ -664,6 +664,14 @@ button[type="submit"]:hover {
   pointer-events: none;
 }
 
+/* ── footer ────────────────────────────────────────────────── */
+#site-footer {
+  text-align: center;
+  padding: 2rem 0 1.25rem;
+  font-size: .75rem;
+  color: #ccc;
+}
+
 /* ── version label ─────────────────────────────────────────── */
 #version-label {
   position: fixed;
