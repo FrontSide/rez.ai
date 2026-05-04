@@ -1,3 +1,10 @@
+/* ── base path (works behind a subpath reverse proxy) ──────── */
+const _base = (() => {
+  const p = window.location.pathname.replace(/\/$/, "");
+  if (p.endsWith("/cookbook")) return p.slice(0, -"/cookbook".length);
+  return p;
+})();
+
 /* ── state ─────────────────────────────────────────────────── */
 let currentQuery = "";
 let _savedUrls   = new Set(); // urls saved by the current user
@@ -13,7 +20,12 @@ const searchInput     = document.getElementById("search-input");
 const toast           = document.getElementById("toast");
 
 /* ── routing ───────────────────────────────────────────────── */
-document.addEventListener("DOMContentLoaded", () => routeFromURL());
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("logo").href          = _base + "/";
+  document.getElementById("nav-explore").href   = _base + "/";
+  document.getElementById("nav-cookbook").href  = _base + "/cookbook";
+  routeFromURL();
+});
 window.addEventListener("popstate", () => routeFromURL());
 
 function routeFromURL() {
@@ -27,7 +39,7 @@ function routeFromURL() {
   } else if (q) {
     searchInput.value = q;
     showResults(q, false);
-  } else if (path === "/cookbook") {
+  } else if (path === _base + "/cookbook") {
     showCookbook(false);
   } else {
     loadFeatured(false);
@@ -36,10 +48,10 @@ function routeFromURL() {
 
 function navigate(section) {
   if (section === "cookbook") {
-    history.pushState({}, "", "/cookbook");
+    history.pushState({}, "", _base + "/cookbook");
     showCookbook(false);
   } else {
-    history.pushState({}, "", "/");
+    history.pushState({}, "", _base + "/");
     loadFeatured(false);
   }
 }
@@ -109,7 +121,7 @@ function _updateBookmarkBtn(btn, saved) {
 
 /* ── startup / featured ────────────────────────────────────── */
 async function loadFeatured(push = true) {
-  if (push) history.pushState({}, "", "/");
+  if (push) history.pushState({}, "", _base + "/");
   _setActiveNav("explore");
   currentQuery = "";
   searchInput.value = "";
@@ -138,7 +150,7 @@ async function handleSearch(e) {
 }
 
 async function showResults(q, push = true) {
-  if (push) history.pushState({}, "", `?q=${encodeURIComponent(q)}`);
+  if (push) history.pushState({}, "", `${_base}/?q=${encodeURIComponent(q)}`);
   _setActiveNav("explore");
   currentQuery = q;
   searchInput.value = q;
@@ -160,7 +172,7 @@ async function showResults(q, push = true) {
 
 /* ── cookbook ──────────────────────────────────────────────── */
 async function showCookbook(push = true) {
-  if (push) history.pushState({}, "", "/cookbook");
+  if (push) history.pushState({}, "", _base + "/cookbook");
   _setActiveNav("cookbook");
   _hideAll();
   cookbookSection.hidden = false;
@@ -258,7 +270,7 @@ cookbookGrid.addEventListener("click", e => {
 
 /* ── recipe detail ─────────────────────────────────────────── */
 async function loadRecipe(url, push = true) {
-  if (push) history.pushState({}, "", `?recipe=${encodeURIComponent(url)}`);
+  if (push) history.pushState({}, "", `${_base}/?recipe=${encodeURIComponent(url)}`);
   _hideAll();
   recipeSection.hidden = false;
   recipeSection.innerHTML = renderRecipeSkeleton();
