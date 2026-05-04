@@ -10,6 +10,8 @@ async function getSupabase() {
     console.warn("Supabase not configured — auth disabled");
     return null;
   }
+  const vEl = document.getElementById("version-label");
+  if (vEl && data.version) vEl.textContent = `v${data.version}`;
   _supabase = supabase.createClient(supabase_url, supabase_anon_key);
   return _supabase;
 }

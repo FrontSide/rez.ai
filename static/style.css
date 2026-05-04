@@ -664,5 +664,16 @@ button[type="submit"]:hover {
   pointer-events: none;
 }
 
+/* ── version label ─────────────────────────────────────────── */
+#version-label {
+  position: fixed;
+  bottom: .6rem;
+  left: .8rem;
+  font-size: .7rem;
+  color: #ccc;
+  pointer-events: none;
+  z-index: 50;
+}
+
 /* ── utility ───────────────────────────────────────────────── */
 [hidden] { display: none !important; }
