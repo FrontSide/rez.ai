@@ -86,6 +86,7 @@ async function toggleSave(url, btn) {
       method,
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
+    if (res.status === 401) { openAuthModal(); return; }
     if (!res.ok) throw new Error();
     if (isSaved) {
       _savedUrls.delete(url);
@@ -181,7 +182,7 @@ async function showCookbook(push = true) {
     if (!data.results.length) {
       cookbookGrid.innerHTML = `<p class="cookbook-empty">No saved recipes yet — explore and click ☆ to add some.</p>`;
     } else {
-      renderCards(cookbookGrid, data.results, true);
+      renderCards(cookbookGrid, data.results);
     }
   } catch (err) {
     cookbookGrid.innerHTML = `<p class="error">Could not load cookbook: ${escHtml(String(err))}</p>`;
@@ -212,7 +213,7 @@ function renderSkeletons(grid) {
   `).join("");
 }
 
-function renderCards(grid, results, forceShowBookmark = false) {
+function renderCards(grid, results) {
   if (!results.length) {
     grid.innerHTML = `<p style="color:var(--muted)">No recipes found. Try a different search.</p>`;
     return;

@@ -6,7 +6,7 @@ from urllib.parse import unquote
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 
-from auth import optional_user, require_user
+from auth import require_user
 from database import Recipe, SavedRecipe, SessionLocal, init_db
 from scraper import bbc_good_food
 
