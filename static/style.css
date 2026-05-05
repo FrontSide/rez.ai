@@ -289,6 +289,29 @@ button[type="submit"]:hover {
 }
 
 /* ── results ───────────────────────────────────────────────── */
+#category-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-bottom: 1.5rem;
+}
+.category-pill {
+  font-family: var(--hand);
+  font-size: .9rem;
+  padding: .3rem .85rem;
+  background: transparent;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  cursor: pointer;
+  transition: background .1s, color .1s;
+  white-space: nowrap;
+}
+.category-pill:hover,
+.category-pill.active {
+  background: var(--ink);
+  color: var(--surface);
+}
+
 #results-heading {
   font-family: var(--hand);
   font-size: 1.05rem;
