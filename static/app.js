@@ -272,7 +272,11 @@ function renderCards(grid, results) {
         <div class="card-body">
           <span class="card-source">${sourceLabel(r.source)}</span>
           <span class="card-title">${escHtml(r.title)}</span>
-          ${r.cook_time ? `<span class="card-meta">⏱ ${escHtml(r.cook_time)}</span>` : ""}
+          ${(r.rating || r.cook_time) ? `
+          <div class="card-meta">
+            ${r.rating ? `<span class="card-rating">★ ${Number(r.rating).toFixed(1)}${r.rating_count ? ` <span class="card-rating-count">(${Number(r.rating_count).toLocaleString()})</span>` : ""}</span>` : ""}
+            ${r.cook_time ? `<span>⏱ ${escHtml(r.cook_time)}</span>` : ""}
+          </div>` : ""}
         </div>
         <button class="bookmark-btn${saved ? " saved" : ""}"
           title="${saved ? "Remove from cookbook" : "Save to cookbook"}"
