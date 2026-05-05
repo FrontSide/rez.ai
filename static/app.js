@@ -5,6 +5,21 @@ const _base = (() => {
   return p;
 })();
 
+/* ── categories ────────────────────────────────────────────── */
+const _CATEGORIES = [
+  { label: "Dinner",       query: "dinner" },
+  { label: "Dessert",      query: "dessert" },
+  { label: "Starter",      query: "starter" },
+  { label: "Breakfast",    query: "breakfast" },
+  { label: "Snack",        query: "snack" },
+  { label: "Drinks",       query: "drinks" },
+  { label: "Healthy",      query: "healthy" },
+  { label: "Quick",        query: "quick easy" },
+  { label: "Vegetarian",   query: "vegetarian" },
+  { label: "Baking",       query: "baking" },
+  { label: "Comfort Food", query: "comfort food" },
+];
+
 /* ── state ─────────────────────────────────────────────────── */
 let currentQuery = "";
 let _savedUrls   = new Set(); // urls saved by the current user
@@ -13,11 +28,16 @@ let _savedUrls   = new Set(); // urls saved by the current user
 const resultsSection  = document.getElementById("results-section");
 const resultsHeading  = document.getElementById("results-heading");
 const resultsGrid     = document.getElementById("results-grid");
+const categoryBar     = document.getElementById("category-bar");
 const recipeSection   = document.getElementById("recipe-section");
 const cookbookSection = document.getElementById("cookbook-section");
 const cookbookGrid    = document.getElementById("cookbook-grid");
 const searchInput     = document.getElementById("search-input");
 const toast           = document.getElementById("toast");
+
+categoryBar.innerHTML = _CATEGORIES.map(c => `
+  <button class="category-pill" onclick="showResults('${c.query.replace(/'/g, "\\'")}', true)">${escHtml(c.label)}</button>
+`).join("");
 
 /* ── routing ───────────────────────────────────────────────── */
 document.addEventListener("DOMContentLoaded", () => {
@@ -54,6 +74,13 @@ function navigate(section) {
     history.pushState({}, "", _base + "/");
     loadFeatured(false);
   }
+}
+
+function _setActiveCategory(q) {
+  categoryBar.querySelectorAll(".category-pill").forEach(btn => {
+    const match = _CATEGORIES.find(c => c.query === q);
+    btn.classList.toggle("active", match && btn.textContent === match.label);
+  });
 }
 
 function _setActiveNav(section) {
@@ -125,6 +152,7 @@ async function loadFeatured(push = true) {
   _setActiveNav("explore");
   currentQuery = "";
   searchInput.value = "";
+  _setActiveCategory("");
   _hideAll();
   resultsSection.hidden = false;
   resultsHeading.innerHTML = "Popular recipes";
@@ -154,6 +182,7 @@ async function showResults(q, push = true) {
   _setActiveNav("explore");
   currentQuery = q;
   searchInput.value = q;
+  _setActiveCategory(q);
   _hideAll();
   resultsSection.hidden = false;
   resultsHeading.innerHTML = `Results for <span>"${escHtml(q)}"</span>`;
