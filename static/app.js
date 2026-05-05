@@ -340,13 +340,15 @@ function renderRecipe(r) {
     </div>
 
     <div class="recipe-layout">
-      ${r.image_url ? `<img class="recipe-side-img" src="${escHtml(r.image_url)}" alt="${escHtml(r.title)}" />` : ""}
+      <div class="recipe-sidebar">
+        ${r.image_url ? `<img class="recipe-side-img" src="${escHtml(r.image_url)}" alt="${escHtml(r.title)}" />` : ""}
+        ${tags ? `<div class="recipe-tags">${tags}</div>` : ""}
+      </div>
       <div class="recipe-content">
         <a class="recipe-source-badge" href="${escHtml(r.url)}" target="_blank" rel="noopener noreferrer">Recipe from: ${sourceLabel(r.source)} ↗</a>
         <h1 class="recipe-title">${escHtml(r.title)}</h1>
         ${r.description ? `<p class="recipe-description">${escHtml(r.description)}</p>` : ""}
         ${ratingDisplay}
-        ${tags ? `<div class="recipe-tags">${tags}</div>` : ""}
         ${metaBar}
         <div class="recipe-columns">
           <div>
