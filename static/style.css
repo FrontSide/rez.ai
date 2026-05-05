@@ -510,17 +510,25 @@ button[type="submit"]:hover {
 .recipe-content {
   min-width: 0; /* prevent grid blowout */
 }
+.recipe-sidebar {
+  position: sticky;
+  top: 4.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
 .recipe-side-img {
   width: 100%;
   aspect-ratio: 3/4;
   object-fit: cover;
   border: 1px solid #ccc;
   display: block;
-  position: sticky;
-  top: 4.5rem;
+}
+.recipe-sidebar .recipe-tags {
+  margin-bottom: 0;
 }
 @media (max-width: 640px) {
-  .recipe-side-img  { display: none; }
+  .recipe-sidebar   { display: none; }
   .recipe-layout    { grid-template-columns: 1fr; }
 }
 
