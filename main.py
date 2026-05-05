@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from auth import require_user
 from database import Recipe, SavedRecipe, SessionLocal, init_db
-from scraper import bbc_good_food
+from scraper import bbc_good_food, gutekueche_at
 
 
 @asynccontextmanager
@@ -23,11 +23,15 @@ app = FastAPI(title="rez.ai", lifespan=lifespan)
 
 # --- API routes (must be registered before static mount) ---
 
-_FEATURED_QUERIES = ["pasta", "chicken", "chocolate cake", "salad"]
+_FEATURED_QUERIES_BBC = ["pasta", "chicken", "chocolate cake", "salad"]
+_FEATURED_QUERIES_GK  = ["Auflauf", "Suppe", "Kuchen", "Salat"]
 
 @app.get("/api/featured")
 async def featured_recipes():
-    tasks = [asyncio.to_thread(bbc_good_food.search, q) for q in _FEATURED_QUERIES]
+    tasks = (
+        [asyncio.to_thread(bbc_good_food.search, q) for q in _FEATURED_QUERIES_BBC]
+        + [asyncio.to_thread(gutekueche_at.search, q) for q in _FEATURED_QUERIES_GK]
+    )
     results_lists = await asyncio.gather(*tasks, return_exceptions=True)
 
     seen: set[str] = set()
@@ -39,16 +43,29 @@ async def featured_recipes():
                 seen.add(r[i]["url"])
                 combined.append(r[i])
 
-    return {"results": combined[:12]}
+    return {"results": combined[:16]}
 
 
 @app.get("/api/search")
 async def search_recipes(q: str = Query(..., min_length=1)):
-    try:
-        results = await asyncio.to_thread(bbc_good_food.search, q)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Search failed: {e}")
-    return {"query": q, "results": results}
+    bbc_task = asyncio.to_thread(bbc_good_food.search, q)
+    gk_task  = asyncio.to_thread(gutekueche_at.search, q)
+    bbc_res, gk_res = await asyncio.gather(bbc_task, gk_task, return_exceptions=True)
+
+    seen: set[str] = set()
+    combined: list[dict] = []
+    for result_list in (bbc_res, gk_res):
+        if isinstance(result_list, Exception):
+            continue
+        for r in result_list:
+            if r["url"] not in seen:
+                seen.add(r["url"])
+                combined.append(r)
+
+    if not combined:
+        raise HTTPException(status_code=502, detail="Search failed")
+
+    return {"query": q, "results": combined}
 
 
 @app.get("/api/recipe")
@@ -60,8 +77,9 @@ async def get_recipe(url: str = Query(...)):
         if cached:
             return _to_dict(cached, from_cache=True)
 
+    scraper = gutekueche_at if "gutekueche.at" in url else bbc_good_food
     try:
-        data = await asyncio.to_thread(bbc_good_food.scrape_recipe, url)
+        data = await asyncio.to_thread(scraper.scrape_recipe, url)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Scrape failed: {e}")
 

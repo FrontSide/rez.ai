@@ -18,6 +18,8 @@ const _CATEGORIES = [
   { label: "Vegetarian",   query: "vegetarian" },
   { label: "Baking",       query: "baking" },
   { label: "Comfort Food", query: "comfort food" },
+  { label: "Auflauf",      query: "Auflauf" },
+  { label: "Suppe",        query: "Suppe" },
 ];
 
 /* ── state ─────────────────────────────────────────────────── */
@@ -416,7 +418,10 @@ function escHtml(str) {
 }
 
 function sourceLabel(source) {
-  const labels = { bbc_good_food: "BBC Good Food" };
+  const labels = {
+    bbc_good_food:  "BBC Good Food",
+    gutekueche_at:  "Gutekueche.at (DE)",
+  };
   return labels[source] || source;
 }
 
