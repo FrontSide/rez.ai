@@ -11,6 +11,10 @@
   --hand:      'Architects Daughter', cursive;
 }
 
+html, body {
+  overflow-x: hidden;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 1.05rem;
@@ -75,6 +79,11 @@ body {
   cursor: pointer;
 }
 #sign-out-btn:hover { color: var(--ink); border-color: var(--ink); }
+
+@media (max-width: 480px) {
+  #site-header { padding: .6rem .85rem; }
+  #user-email  { display: none; }
+}
 
 /* ── auth modal ────────────────────────────────────────────── */
 #auth-modal-backdrop {
