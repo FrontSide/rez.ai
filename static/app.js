@@ -5,6 +5,23 @@ const _base = (() => {
   return p;
 })();
 
+/* ── categories ────────────────────────────────────────────── */
+const _CATEGORIES = [
+  { label: "Dinner",       query: "dinner" },
+  { label: "Dessert",      query: "dessert" },
+  { label: "Starter",      query: "starter" },
+  { label: "Breakfast",    query: "breakfast" },
+  { label: "Snack",        query: "snack" },
+  { label: "Drinks",       query: "drinks" },
+  { label: "Healthy",      query: "healthy" },
+  { label: "Quick",        query: "quick easy" },
+  { label: "Vegetarian",   query: "vegetarian" },
+  { label: "Baking",       query: "baking" },
+  { label: "Comfort Food", query: "comfort food" },
+  { label: "Auflauf",      query: "Auflauf" },
+  { label: "Suppe",        query: "Suppe" },
+];
+
 /* ── state ─────────────────────────────────────────────────── */
 let currentQuery = "";
 let _savedUrls   = new Set(); // urls saved by the current user
@@ -13,11 +30,16 @@ let _savedUrls   = new Set(); // urls saved by the current user
 const resultsSection  = document.getElementById("results-section");
 const resultsHeading  = document.getElementById("results-heading");
 const resultsGrid     = document.getElementById("results-grid");
+const categoryBar     = document.getElementById("category-bar");
 const recipeSection   = document.getElementById("recipe-section");
 const cookbookSection = document.getElementById("cookbook-section");
 const cookbookGrid    = document.getElementById("cookbook-grid");
 const searchInput     = document.getElementById("search-input");
 const toast           = document.getElementById("toast");
+
+categoryBar.innerHTML = _CATEGORIES.map(c => `
+  <button class="category-pill" onclick="showResults('${c.query.replace(/'/g, "\\'")}', true)">${escHtml(c.label)}</button>
+`).join("");
 
 /* ── routing ───────────────────────────────────────────────── */
 document.addEventListener("DOMContentLoaded", () => {
@@ -56,6 +78,13 @@ function navigate(section) {
   }
 }
 
+function _setActiveCategory(q) {
+  categoryBar.querySelectorAll(".category-pill").forEach(btn => {
+    const match = _CATEGORIES.find(c => c.query === q);
+    btn.classList.toggle("active", match && btn.textContent === match.label);
+  });
+}
+
 function _setActiveNav(section) {
   document.getElementById("nav-explore").classList.toggle("active", section === "explore");
   document.getElementById("nav-cookbook").classList.toggle("active", section === "cookbook");
@@ -69,14 +98,12 @@ function _hideAll() {
 
 /* ── saved state ───────────────────────────────────────────── */
 async function _loadSavedUrls() {
-  const sb = await getSupabase();
-  if (!sb) return;
-  const { data: { session } } = await sb.auth.getSession();
+  const session = getSession();
   if (!session) return;
 
   try {
     const res = await fetch("api/saves", {
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: { Authorization: `Bearer ${session.token}` },
     });
     if (!res.ok) return;
     const data = await res.json();
@@ -85,9 +112,7 @@ async function _loadSavedUrls() {
 }
 
 async function toggleSave(url, btn) {
-  const sb = await getSupabase();
-  if (!sb) { openAuthModal(); return; }
-  const { data: { session } } = await sb.auth.getSession();
+  const session = getSession();
   if (!session) { openAuthModal(); return; }
 
   const isSaved = _savedUrls.has(url);
@@ -96,7 +121,7 @@ async function toggleSave(url, btn) {
   try {
     const res = await fetch(`api/saves?url=${encodeURIComponent(url)}`, {
       method,
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: { Authorization: `Bearer ${session.token}` },
     });
     if (res.status === 401) { openAuthModal(); return; }
     if (!res.ok) throw new Error();
@@ -125,6 +150,7 @@ async function loadFeatured(push = true) {
   _setActiveNav("explore");
   currentQuery = "";
   searchInput.value = "";
+  _setActiveCategory("");
   _hideAll();
   resultsSection.hidden = false;
   resultsHeading.innerHTML = "Popular recipes";
@@ -154,6 +180,7 @@ async function showResults(q, push = true) {
   _setActiveNav("explore");
   currentQuery = q;
   searchInput.value = q;
+  _setActiveCategory(q);
   _hideAll();
   resultsSection.hidden = false;
   resultsHeading.innerHTML = `Results for <span>"${escHtml(q)}"</span>`;
@@ -177,9 +204,7 @@ async function showCookbook(push = true) {
   _hideAll();
   cookbookSection.hidden = false;
 
-  const sb = await getSupabase();
-  if (!sb) { _showCookbookAuthPrompt(); return; }
-  const { data: { session } } = await sb.auth.getSession();
+  const session = getSession();
   if (!session) { _showCookbookAuthPrompt(); return; }
 
   renderSkeletons(cookbookGrid);
@@ -187,7 +212,7 @@ async function showCookbook(push = true) {
 
   try {
     const res = await fetch("api/saves", {
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: { Authorization: `Bearer ${session.token}` },
     });
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
@@ -241,7 +266,11 @@ function renderCards(grid, results) {
         <div class="card-body">
           <span class="card-source">${sourceLabel(r.source)}</span>
           <span class="card-title">${escHtml(r.title)}</span>
-          ${r.cook_time ? `<span class="card-meta">⏱ ${escHtml(r.cook_time)}</span>` : ""}
+          ${(r.rating || r.cook_time) ? `
+          <div class="card-meta">
+            ${r.rating ? `<span class="card-rating">★ ${Number(r.rating).toFixed(1)}${r.rating_count ? ` <span class="card-rating-count">(${Number(r.rating_count).toLocaleString()})</span>` : ""}</span>` : ""}
+            ${r.cook_time ? `<span>⏱ ${escHtml(r.cook_time)}</span>` : ""}
+          </div>` : ""}
         </div>
         <button class="bookmark-btn${saved ? " saved" : ""}"
           title="${saved ? "Remove from cookbook" : "Save to cookbook"}"
@@ -340,13 +369,15 @@ function renderRecipe(r) {
     </div>
 
     <div class="recipe-layout">
-      ${r.image_url ? `<img class="recipe-side-img" src="${escHtml(r.image_url)}" alt="${escHtml(r.title)}" />` : ""}
+      <div class="recipe-sidebar">
+        ${r.image_url ? `<img class="recipe-side-img" src="${escHtml(r.image_url)}" alt="${escHtml(r.title)}" />` : ""}
+        ${tags ? `<div class="recipe-tags">${tags}</div>` : ""}
+      </div>
       <div class="recipe-content">
         <a class="recipe-source-badge" href="${escHtml(r.url)}" target="_blank" rel="noopener noreferrer">Recipe from: ${sourceLabel(r.source)} ↗</a>
         <h1 class="recipe-title">${escHtml(r.title)}</h1>
         ${r.description ? `<p class="recipe-description">${escHtml(r.description)}</p>` : ""}
         ${ratingDisplay}
-        ${tags ? `<div class="recipe-tags">${tags}</div>` : ""}
         ${metaBar}
         <div class="recipe-columns">
           <div>
@@ -385,7 +416,10 @@ function escHtml(str) {
 }
 
 function sourceLabel(source) {
-  const labels = { bbc_good_food: "BBC Good Food" };
+  const labels = {
+    bbc_good_food:  "BBC Good Food",
+    gutekueche_at:  "Gutekueche.at (DE)",
+  };
   return labels[source] || source;
 }
 
