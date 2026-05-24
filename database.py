@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import create_engine, Column, String, JSON, DateTime, Integer, UniqueConstraint
+from sqlalchemy import create_engine, Column, String, JSON, DateTime, Integer, UniqueConstraint, Boolean
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from datetime import datetime, timezone
 
@@ -16,6 +16,16 @@ SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 class Base(DeclarativeBase):
     pass
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id               = Column(String, primary_key=True)
+    email            = Column(String, unique=True, nullable=False, index=True)
+    hashed_password  = Column(String, nullable=True)   # null for OAuth-only users
+    name             = Column(String, nullable=True)
+    created_at       = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class Recipe(Base):

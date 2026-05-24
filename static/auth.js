@@ -1,57 +1,73 @@
-/* ── Supabase auth ──────────────────────────────────────────── */
-let _supabase = null;
-let _authMode = "signin"; // "signin" | "signup"
+/* ── Session storage (localStorage) ─────────────────────────── */
+const _TOKEN_KEY = "rez_auth_token";
 
-async function getSupabase() {
-  if (_supabase) return _supabase;
-  const res = await fetch("api/config");
-  const data = await res.json();
-  const { supabase_url, supabase_anon_key, version } = data;
-  if (!supabase_url || !supabase_anon_key) {
-    console.warn("Supabase not configured — auth disabled");
-    return null;
-  }
-  const vEl = document.getElementById("version-label");
-  if (vEl && version) vEl.textContent = `v${version}`;
-  _supabase = supabase.createClient(supabase_url, supabase_anon_key);
-  return _supabase;
+function _parseToken(token) {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    if (payload.exp && payload.exp * 1000 < Date.now()) return null;
+    return payload;
+  } catch { return null; }
 }
 
-/* ── init ─────────────────────────────────────────────────── */
-(async function initAuth() {
-  const sb = await getSupabase();
-  if (!sb) return;
+function getSession() {
+  const token = localStorage.getItem(_TOKEN_KEY);
+  if (!token) return null;
+  const payload = _parseToken(token);
+  if (!payload) { localStorage.removeItem(_TOKEN_KEY); return null; }
+  return { token, user: { sub: payload.sub, email: payload.email, name: payload.name } };
+}
 
-  const { data: { session } } = await sb.auth.getSession();
-  _applySession(session);
+function _storeToken(token) {
+  if (!_parseToken(token)) return;
+  localStorage.setItem(_TOKEN_KEY, token);
+}
 
-  sb.auth.onAuthStateChange((_event, session) => {
-    _applySession(session);
-    if (session) {
-      closeAuthModal();
-      // Refresh cookbook if it's currently visible
-      const cookbook = document.getElementById("cookbook-section");
-      if (cookbook && !cookbook.hidden) showCookbook(false);
-    }
-  });
+/* ── Handle OAuth callback token in URL ──────────────────────── */
+(function handleOAuthCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
+  if (!token) return;
+  _storeToken(token);
+  const url = new URL(window.location);
+  url.searchParams.delete("token");
+  window.history.replaceState({}, "", url);
+})();
+
+/* ── Init ────────────────────────────────────────────────────── */
+(function initAuth() {
+  _applySession(getSession());
+  try {
+    const version = null; // version loaded via /api/config separately if needed
+  } catch { /* */ }
+})();
+
+/* ── Fetch version label ─────────────────────────────────────── */
+(async function loadVersion() {
+  try {
+    const res  = await fetch("api/config");
+    const data = await res.json();
+    const vEl  = document.getElementById("version-label");
+    if (vEl && data.version) vEl.textContent = `v${data.version}`;
+  } catch { /* */ }
 })();
 
 function _applySession(session) {
-  const authBtn    = document.getElementById("auth-btn");
-  const userMenu   = document.getElementById("user-menu");
-  const userEmail  = document.getElementById("user-email");
+  const authBtn   = document.getElementById("auth-btn");
+  const userMenu  = document.getElementById("user-menu");
+  const userEmail = document.getElementById("user-email");
 
   if (session?.user) {
-    authBtn.hidden   = true;
-    userMenu.hidden  = false;
-    userEmail.textContent = session.user.email || session.user.user_metadata?.full_name || "Account";
+    authBtn.hidden  = true;
+    userMenu.hidden = false;
+    userEmail.textContent = session.user.name || session.user.email || "Account";
   } else {
-    authBtn.hidden   = false;
-    userMenu.hidden  = true;
+    authBtn.hidden  = false;
+    userMenu.hidden = true;
   }
 }
 
-/* ── modal open/close ─────────────────────────────────────── */
+/* ── Modal open/close ────────────────────────────────────────── */
+let _authMode = "signin";
 let _modalFormHTML = null;
 
 function openAuthModal() {
@@ -72,47 +88,26 @@ function closeAuthModal() {
   _modalFormHTML = null;
 }
 
-function _showConfirmation(email) {
-  const inner = document.getElementById("auth-modal-inner");
-  _modalFormHTML = inner.innerHTML;
-  inner.innerHTML = `
-    <h2 class="modal-title">Check your inbox</h2>
-    <p class="auth-confirm-text">
-      We sent a confirmation link to<br>
-      <strong>${escHtml(email)}</strong>
-    </p>
-    <p class="auth-confirm-sub">Click the link in the email to activate your account.</p>
-    <button class="provider-btn" onclick="closeAuthModal()">Got it</button>
-  `;
-}
-
 function toggleAuthMode(e) {
   e.preventDefault();
   _authMode = _authMode === "signin" ? "signup" : "signin";
   const isSignup = _authMode === "signup";
-  document.getElementById("auth-submit").textContent     = isSignup ? "Sign up" : "Sign in";
+  document.getElementById("auth-submit").textContent      = isSignup ? "Sign up" : "Sign in";
   document.getElementById("auth-toggle-text").textContent = isSignup ? "Already have an account?" : "Don't have an account?";
   document.getElementById("auth-toggle-link").textContent = isSignup ? "Sign in" : "Sign up";
   document.getElementById("auth-error").hidden = true;
 }
 
-/* ── social ──────────────────────────────────────────────── */
-async function signInWith(provider) {
-  const sb = await getSupabase();
-  if (!sb) return;
-  const appRoot = window.location.origin +
-    window.location.pathname.replace(/\/$/, "").replace(/\/cookbook$/, "") + "/";
-  await sb.auth.signInWithOAuth({
-    provider,
-    options: { redirectTo: appRoot },
-  });
+/* ── Google OAuth ────────────────────────────────────────────── */
+function signInWith(provider) {
+  if (provider === "google") {
+    window.location.href = "api/auth/google";
+  }
 }
 
-/* ── email / password ─────────────────────────────────────── */
+/* ── Email / password ────────────────────────────────────────── */
 async function handleEmailAuth(e) {
   e.preventDefault();
-  const sb = await getSupabase();
-  if (!sb) return;
 
   const email    = document.getElementById("auth-email").value.trim();
   const password = document.getElementById("auth-password").value;
@@ -122,24 +117,34 @@ async function handleEmailAuth(e) {
   btn.disabled = true;
   errEl.hidden = true;
 
-  const { error } =
-    _authMode === "signup"
-      ? await sb.auth.signUp({ email, password })
-      : await sb.auth.signInWithPassword({ email, password });
-
-  btn.disabled = false;
-
-  if (error) {
-    errEl.textContent = error.message;
+  const endpoint = _authMode === "signup" ? "api/auth/signup" : "api/auth/login";
+  try {
+    const res  = await fetch(endpoint, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.detail || "Authentication failed";
+      errEl.hidden = false;
+      return;
+    }
+    _storeToken(data.token);
+    _applySession(getSession());
+    closeAuthModal();
+    const cookbook = document.getElementById("cookbook-section");
+    if (cookbook && !cookbook.hidden) showCookbook(false);
+  } catch {
+    errEl.textContent = "Network error — please try again";
     errEl.hidden = false;
-  } else if (_authMode === "signup") {
-    _showConfirmation(email);
+  } finally {
+    btn.disabled = false;
   }
 }
 
-/* ── sign out ─────────────────────────────────────────────── */
-async function signOut() {
-  const sb = await getSupabase();
-  if (!sb) return;
-  await sb.auth.signOut();
+/* ── Sign out ────────────────────────────────────────────────── */
+function signOut() {
+  localStorage.removeItem(_TOKEN_KEY);
+  _applySession(null);
 }

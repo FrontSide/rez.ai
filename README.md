@@ -15,12 +15,12 @@ A recipe search and reader that scrapes well-known recipe sites, extracts ingred
 | Backend | [FastAPI](https://fastapi.tiangolo.com/) |
 | Database | SQLite via [SQLAlchemy](https://www.sqlalchemy.org/) |
 | Scraping | [httpx](https://www.python-httpx.org/) + [BeautifulSoup4](https://www.crummy.com/software/BeautifulSoup/) |
-| Auth | [Supabase Auth](https://supabase.com/auth) (JWT verification via JWKS, RS256) |
+| Auth | Self-hosted: Google OAuth via [httpx-oauth](https://frankie567.github.io/httpx-oauth/), email/password with bcrypt, HS256 JWTs |
 | Frontend | Vanilla JS, no build step |
 
 ## Getting started
 
-Copy `.env.example` to `.env` and fill in your Supabase credentials (see [Configuration](#configuration)):
+Copy `.env.example` to `.env` and fill in your credentials (see [Configuration](#configuration)):
 
 ```bash
 cp .env.example .env
@@ -42,22 +42,24 @@ Then open [http://localhost:8000](http://localhost:8000).
 Create a `.env` file (never commit this):
 
 ```env
-SUPABASE_URL=https://<your-project>.supabase.co
-SUPABASE_ANON_KEY=<your-anon-key>
+SECRET_KEY=<generate with: python -c "import secrets; print(secrets.token_hex(32))">
+GOOGLE_CLIENT_ID=<your-google-oauth-client-id>
+GOOGLE_CLIENT_SECRET=<your-google-oauth-client-secret>
+GOOGLE_REDIRECT_URI=http://localhost:8000/api/auth/callback
 ```
 
-Both values are found in your Supabase project under **Settings → API**.
+### Google OAuth setup
 
-### Supabase setup
-
-1. Create a project at [supabase.com](https://supabase.com).
-2. Enable **Authentication → Providers → Google** (and any others you want). Each provider requires a Client ID and Secret from that provider's developer console.
-3. Add your app's URL to **Authentication → URL Configuration → Redirect URLs** (e.g. `http://localhost:8000` for local dev).
-4. Optionally customise the confirmation email under **Authentication → Email Templates**.
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services → Credentials**.
+2. Create an **OAuth 2.0 Client ID** (type: Web application).
+3. Add your redirect URI(s) under **Authorised redirect URIs**:
+   - `http://localhost:8000/api/auth/callback` for local dev
+   - `http://192.168.178.162:8090/api/auth/callback` (or your production URL) for the homelab
+4. Copy the Client ID and Client Secret into `.env`.
 
 ### How auth works
 
-The backend never stores passwords or talks to Supabase at request time. Supabase issues RS256-signed JWTs; the backend verifies them locally using Supabase's public JWKS endpoint (fetched once and cached). No shared secret is required.
+The backend handles the full OAuth flow directly — no third-party auth service involved. On Google login, the user is redirected to `/api/auth/google`, which bounces them to Google and handles the callback at `/api/auth/callback`. On success, the backend creates or finds the user in the local database and issues a signed HS256 JWT. Email/password accounts are also supported — passwords are hashed with bcrypt and stored in the local `users` table. All protected routes verify the JWT using the `SECRET_KEY`.
 
 ## Deployment
 
@@ -74,7 +76,7 @@ Merging a PR into `main` automatically triggers a deployment via GitHub Actions 
 ssh david@192.168.178.162 "cd ~/rez.ai && git pull && docker compose up -d --build"
 ```
 
-The compose file expects `SUPABASE_URL` and `SUPABASE_ANON_KEY` to be present in a `.env` file in the project directory on the server. Recipe data is persisted to `/home/david/data/rez.ai` on the host.
+The compose file expects `SECRET_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` to be present in a `.env` file in the project directory on the server. Recipe data is persisted to `/home/david/data/rez.ai` on the host.
 
 ## API
 
@@ -83,7 +85,11 @@ The compose file expects `SUPABASE_URL` and `SUPABASE_ANON_KEY` to be present in
 | `GET /api/featured` | Returns a curated mix of popular recipes |
 | `GET /api/search?q=<query>` | Search BBC Good Food, returns up to 30 results |
 | `GET /api/recipe?url=<url>` | Fetch a recipe (from cache or scraped live) |
-| `GET /api/config` | Returns public Supabase credentials for the frontend |
+| `GET /api/config` | Returns app version |
+| `GET /api/auth/google` | Initiates Google OAuth flow |
+| `GET /api/auth/callback` | Google OAuth callback — issues JWT and redirects to app |
+| `POST /api/auth/login` | Email/password login — returns JWT |
+| `POST /api/auth/signup` | Email/password sign-up — returns JWT |
 
 ## Adding more recipe sources
 
@@ -100,4 +106,5 @@ Then wire it into the relevant routes in `main.py`.
 
 ## Supported sources
 
-- [BBC Good Food](https://www.bbcgoodfood.com)
+- [BBC Good Food](https://www.bbcgoodfood.com) (English)
+- [Gutekueche.at](https://www.gutekueche.at) (German)

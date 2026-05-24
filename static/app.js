@@ -98,14 +98,12 @@ function _hideAll() {
 
 /* ── saved state ───────────────────────────────────────────── */
 async function _loadSavedUrls() {
-  const sb = await getSupabase();
-  if (!sb) return;
-  const { data: { session } } = await sb.auth.getSession();
+  const session = getSession();
   if (!session) return;
 
   try {
     const res = await fetch("api/saves", {
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: { Authorization: `Bearer ${session.token}` },
     });
     if (!res.ok) return;
     const data = await res.json();
@@ -114,9 +112,7 @@ async function _loadSavedUrls() {
 }
 
 async function toggleSave(url, btn) {
-  const sb = await getSupabase();
-  if (!sb) { openAuthModal(); return; }
-  const { data: { session } } = await sb.auth.getSession();
+  const session = getSession();
   if (!session) { openAuthModal(); return; }
 
   const isSaved = _savedUrls.has(url);
@@ -125,7 +121,7 @@ async function toggleSave(url, btn) {
   try {
     const res = await fetch(`api/saves?url=${encodeURIComponent(url)}`, {
       method,
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: { Authorization: `Bearer ${session.token}` },
     });
     if (res.status === 401) { openAuthModal(); return; }
     if (!res.ok) throw new Error();
@@ -208,9 +204,7 @@ async function showCookbook(push = true) {
   _hideAll();
   cookbookSection.hidden = false;
 
-  const sb = await getSupabase();
-  if (!sb) { _showCookbookAuthPrompt(); return; }
-  const { data: { session } } = await sb.auth.getSession();
+  const session = getSession();
   if (!session) { _showCookbookAuthPrompt(); return; }
 
   renderSkeletons(cookbookGrid);
@@ -218,7 +212,7 @@ async function showCookbook(push = true) {
 
   try {
     const res = await fetch("api/saves", {
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: { Authorization: `Bearer ${session.token}` },
     });
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();

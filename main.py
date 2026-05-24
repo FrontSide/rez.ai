@@ -1,15 +1,26 @@
 import asyncio
 import os
+import secrets
+import uuid
 from contextlib import asynccontextmanager
 from urllib.parse import unquote
 
-from fastapi import Depends, FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+import httpx
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from httpx_oauth.clients.google import GoogleOAuth2
+from pydantic import BaseModel
 
-from auth import require_user
-from database import Recipe, SavedRecipe, SessionLocal, init_db
+from auth import create_token, hash_password, require_user, verify_password
+from database import Recipe, SavedRecipe, SessionLocal, User, init_db
 from scraper import bbc_good_food, gutekueche_at
+
+_GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID", "")
+_GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+_GOOGLE_REDIRECT_URI  = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/callback")
+
+_google = GoogleOAuth2(_GOOGLE_CLIENT_ID, _GOOGLE_CLIENT_SECRET)
 
 
 @asynccontextmanager
@@ -150,11 +161,91 @@ async def get_config():
         version = open("VERSION").read().strip()
     except OSError:
         version = "unknown"
-    return {
-        "supabase_url":      os.getenv("SUPABASE_URL", ""),
-        "supabase_anon_key": os.getenv("SUPABASE_ANON_KEY", ""),
-        "version":           version,
-    }
+    return {"version": version}
+
+
+# --- Auth routes ---
+
+@app.get("/api/auth/google")
+async def auth_google():
+    state = secrets.token_urlsafe(16)
+    url = await _google.get_authorization_url(
+        _GOOGLE_REDIRECT_URI,
+        state=state,
+        scope=["openid", "email", "profile"],
+    )
+    response = RedirectResponse(url)
+    response.set_cookie("oauth_state", state, max_age=600, httponly=True, samesite="lax")
+    return response
+
+
+@app.get("/api/auth/callback")
+async def auth_callback(code: str, state: str, request: Request):
+    cookie_state = request.cookies.get("oauth_state")
+    if not cookie_state or cookie_state != state:
+        raise HTTPException(status_code=400, detail="Invalid OAuth state")
+
+    token = await _google.get_access_token(code, _GOOGLE_REDIRECT_URI)
+    access_token = token["access_token"]
+
+    async with httpx.AsyncClient() as client:
+        r = await client.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=5,
+        )
+        r.raise_for_status()
+        info = r.json()
+
+    email = info.get("email", "")
+    name  = info.get("name", "")
+
+    with SessionLocal() as session:
+        user = session.query(User).filter(User.email == email).first()
+        if not user:
+            user = User(id=str(uuid.uuid4()), email=email, name=name)
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+        jwt_token = create_token(user.id, user.email, user.name or "")
+
+    response = RedirectResponse(url=f"/?token={jwt_token}")
+    response.delete_cookie("oauth_state")
+    return response
+
+
+class _AuthBody(BaseModel):
+    email: str
+    password: str
+
+
+@app.post("/api/auth/signup")
+async def signup(body: _AuthBody):
+    with SessionLocal() as session:
+        if session.query(User).filter(User.email == body.email).first():
+            raise HTTPException(status_code=400, detail="Email already registered")
+        user = User(
+            id=str(uuid.uuid4()),
+            email=body.email,
+            hashed_password=hash_password(body.password),
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        token = create_token(user.id, user.email, user.name or "")
+    return {"token": token, "email": body.email, "name": ""}
+
+
+@app.post("/api/auth/login")
+async def login(body: _AuthBody):
+    with SessionLocal() as session:
+        user = session.query(User).filter(User.email == body.email).first()
+        if not user or not user.hashed_password:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        if not verify_password(body.password, user.hashed_password):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        token = create_token(user.id, user.email, user.name or "")
+    return {"token": token, "email": body.email, "name": user.name or ""}
 
 
 # --- SPA routes (serve index.html for all client-side paths) ---
