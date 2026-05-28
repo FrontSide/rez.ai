@@ -19,6 +19,7 @@ from scraper import bbc_good_food, gutekueche_at
 _GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID", "")
 _GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 _GOOGLE_REDIRECT_URI  = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/callback")
+_APP_BASE             = _GOOGLE_REDIRECT_URI.removesuffix("/api/auth/callback")
 
 _google = GoogleOAuth2(_GOOGLE_CLIENT_ID, _GOOGLE_CLIENT_SECRET)
 
@@ -209,7 +210,7 @@ async def auth_callback(code: str, state: str, request: Request):
             session.refresh(user)
         jwt_token = create_token(user.id, user.email, user.name or "")
 
-    response = RedirectResponse(url=f"/?token={jwt_token}")
+    response = RedirectResponse(url=f"{_APP_BASE}/?token={jwt_token}")
     response.delete_cookie("oauth_state")
     return response
 
