@@ -1,11 +1,11 @@
 # rez.ai
 
-A recipe search and reader that scrapes well-known recipe sites, extracts ingredients and method, and caches everything in a local database. Every recipe is displayed in the same clean format regardless of where it came from.
+A recipe search and reader that scrapes well-known recipe sites, extracts ingredients and method, and caches everything locally. Every recipe is displayed in the same clean format regardless of where it came from.
 
 ## How it works
 
-1. User searches for a recipe — results are fetched live from BBC Good Food's search.
-2. User clicks a result — if the recipe has been seen before it's served instantly from the cache; otherwise it's scraped on the fly, cached, and returned.
+1. User searches for a recipe — cached results are returned immediately from Elasticsearch, while live scraper results stream in progressively via SSE.
+2. User clicks a result — if the recipe has been fully scraped before it's served instantly from SQLite; otherwise it's scraped on the fly, cached, and indexed into ES.
 3. Every recipe is shown in the same layout: image, metadata (prep/cook time, servings), ingredients list, numbered method steps.
 
 ## Stack
@@ -13,7 +13,8 @@ A recipe search and reader that scrapes well-known recipe sites, extracts ingred
 | Layer | Tech |
 |---|---|
 | Backend | [FastAPI](https://fastapi.tiangolo.com/) |
-| Database | SQLite via [SQLAlchemy](https://www.sqlalchemy.org/) |
+| Recipe cache | SQLite via [SQLAlchemy](https://www.sqlalchemy.org/) |
+| Search index | [Elasticsearch](https://www.elastic.co/elasticsearch) 8.x (fuzzy full-text, SSE streaming) |
 | Scraping | [httpx](https://www.python-httpx.org/) + [BeautifulSoup4](https://www.crummy.com/software/BeautifulSoup/) |
 | Auth | Self-hosted: Google OAuth via [httpx-oauth](https://frankie567.github.io/httpx-oauth/), email/password with bcrypt, HS256 JWTs |
 | Frontend | Vanilla JS, no build step |
@@ -27,9 +28,10 @@ cp .env.example .env
 # edit .env
 ```
 
-Install dependencies and run:
+Start Elasticsearch (required) and the app:
 
 ```bash
+docker compose up elasticsearch -d
 pip install -r requirements.txt
 export $(cat .env | xargs)
 uvicorn main:app --reload
@@ -76,14 +78,19 @@ Merging a PR into `main` automatically triggers a deployment via GitHub Actions 
 ssh david@192.168.178.162 "cd ~/rez.ai && git pull && docker compose up -d --build"
 ```
 
-The compose file expects `SECRET_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` to be present in a `.env` file in the project directory on the server. Recipe data is persisted to `/home/david/data/rez.ai` on the host.
+The compose file expects `SECRET_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` to be present in a `.env` file in the project directory on the server. Recipe data and the Elasticsearch index are persisted to `/home/david/data/rez.ai` on the host.
+
+**After first deploy** (or to backfill existing cached recipes into ES):
+```bash
+docker compose exec rez-ai python reindex.py
+```
 
 ## API
 
 | Endpoint | Description |
 |---|---|
 | `GET /api/featured` | Returns a curated mix of popular recipes |
-| `GET /api/search?q=<query>` | Search BBC Good Food, returns up to 30 results |
+| `GET /api/search?q=<query>` | SSE stream: cached ES results first, then live scraper results |
 | `GET /api/recipe?url=<url>` | Fetch a recipe (from cache or scraped live) |
 | `GET /api/config` | Returns app version |
 | `GET /api/auth/google` | Initiates Google OAuth flow |
