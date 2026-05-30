@@ -13,6 +13,8 @@ from fastapi.staticfiles import StaticFiles
 from httpx_oauth.clients.google import GoogleOAuth2
 from pydantic import BaseModel
 
+from prometheus_fastapi_instrumentator import Instrumentator
+
 from auth import create_token, hash_password, require_user, verify_password
 from database import Recipe, SavedRecipe, SessionLocal, User, init_db
 from scraper import bbc_good_food, gutekueche_at
@@ -34,6 +36,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="rez.ai", lifespan=lifespan)
+Instrumentator().instrument(app).expose(app)
 
 
 # --- API routes (must be registered before static mount) ---
