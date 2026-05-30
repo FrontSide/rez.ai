@@ -50,7 +50,7 @@ services:
 networks:
   default: {}
   monitoring:
-    name: monitoring_back-tier
+    name: monitoring
     external: true
   uptime-bridge:
     name: uptime-bridge
