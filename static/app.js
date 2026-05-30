@@ -175,6 +175,8 @@ async function handleSearch(e) {
   showResults(q, true);
 }
 
+let _activeSearch = null;
+
 async function showResults(q, push = true) {
   if (push) history.pushState({}, "", `${_base}/?q=${encodeURIComponent(q)}`);
   _setActiveNav("explore");
@@ -187,14 +189,38 @@ async function showResults(q, push = true) {
   renderSkeletons(resultsGrid);
   await _loadSavedUrls();
 
-  try {
-    const res = await fetch(`api/search?q=${encodeURIComponent(q)}`);
-    if (!res.ok) throw new Error(await res.text());
-    const data = await res.json();
-    renderCards(resultsGrid, data.results);
-  } catch (err) {
-    resultsGrid.innerHTML = `<p class="error">Search failed: ${escHtml(String(err))}</p>`;
-  }
+  if (_activeSearch) { _activeSearch.close(); _activeSearch = null; }
+
+  const seenUrls = new Set();
+  let firstBatch = true;
+
+  const source = new EventSource(`api/search?q=${encodeURIComponent(q)}`);
+  _activeSearch = source;
+
+  source.onmessage = (e) => {
+    const { results } = JSON.parse(e.data);
+    const fresh = results.filter(r => !seenUrls.has(r.url));
+    fresh.forEach(r => seenUrls.add(r.url));
+    if (!fresh.length) return;
+    if (firstBatch) { resultsGrid.innerHTML = ""; firstBatch = false; }
+    appendCards(resultsGrid, fresh);
+  };
+
+  source.addEventListener("done", () => {
+    source.close();
+    _activeSearch = null;
+    if (firstBatch) {
+      resultsGrid.innerHTML = `<p style="color:var(--muted)">No recipes found. Try a different search.</p>`;
+    }
+  });
+
+  source.onerror = () => {
+    source.close();
+    _activeSearch = null;
+    if (firstBatch) {
+      resultsGrid.innerHTML = `<p class="error">Search failed — please try again.</p>`;
+    }
+  };
 }
 
 /* ── cookbook ──────────────────────────────────────────────── */
@@ -250,37 +276,47 @@ function renderSkeletons(grid) {
   `).join("");
 }
 
+function appendCards(grid, results) {
+  const fragment = document.createDocumentFragment();
+  const tmp = document.createElement("div");
+  tmp.innerHTML = results.map(r => _cardHTML(r)).join("");
+  while (tmp.firstChild) fragment.appendChild(tmp.firstChild);
+  grid.appendChild(fragment);
+}
+
+function _cardHTML(r) {
+  const saved = _savedUrls.has(r.url);
+  return `
+    <a class="recipe-card" href="#" data-recipe-url="${escHtml(r.url)}">
+      ${r.image_url
+        ? `<img src="${escHtml(r.image_url)}" alt="${escHtml(r.title)}" loading="lazy" />`
+        : `<div class="card-img-placeholder">🍽️</div>`
+      }
+      <div class="card-body">
+        <span class="card-source">${sourceLabel(r.source)}</span>
+        <span class="card-title">${escHtml(r.title)}</span>
+        ${(r.rating || r.cook_time) ? `
+        <div class="card-meta">
+          ${r.rating ? `<span class="card-rating">★ ${Number(r.rating).toFixed(1)}${r.rating_count ? ` <span class="card-rating-count">(${Number(r.rating_count).toLocaleString()})</span>` : ""}</span>` : ""}
+          ${r.cook_time ? `<span>⏱ ${escHtml(r.cook_time)}</span>` : ""}
+        </div>` : ""}
+      </div>
+      <button class="bookmark-btn${saved ? " saved" : ""}"
+        title="${saved ? "Remove from cookbook" : "Save to cookbook"}"
+        data-bookmark-url="${escHtml(r.url)}"
+        onclick="event.preventDefault(); event.stopPropagation(); toggleSave(this.dataset.bookmarkUrl, this)">
+        ${saved ? "★" : "☆"}
+      </button>
+    </a>
+  `;
+}
+
 function renderCards(grid, results) {
   if (!results.length) {
     grid.innerHTML = `<p style="color:var(--muted)">No recipes found. Try a different search.</p>`;
     return;
   }
-  grid.innerHTML = results.map(r => {
-    const saved = _savedUrls.has(r.url);
-    return `
-      <a class="recipe-card" href="#" data-recipe-url="${escHtml(r.url)}">
-        ${r.image_url
-          ? `<img src="${escHtml(r.image_url)}" alt="${escHtml(r.title)}" loading="lazy" />`
-          : `<div class="card-img-placeholder">🍽️</div>`
-        }
-        <div class="card-body">
-          <span class="card-source">${sourceLabel(r.source)}</span>
-          <span class="card-title">${escHtml(r.title)}</span>
-          ${(r.rating || r.cook_time) ? `
-          <div class="card-meta">
-            ${r.rating ? `<span class="card-rating">★ ${Number(r.rating).toFixed(1)}${r.rating_count ? ` <span class="card-rating-count">(${Number(r.rating_count).toLocaleString()})</span>` : ""}</span>` : ""}
-            ${r.cook_time ? `<span>⏱ ${escHtml(r.cook_time)}</span>` : ""}
-          </div>` : ""}
-        </div>
-        <button class="bookmark-btn${saved ? " saved" : ""}"
-          title="${saved ? "Remove from cookbook" : "Save to cookbook"}"
-          data-bookmark-url="${escHtml(r.url)}"
-          onclick="event.preventDefault(); event.stopPropagation(); toggleSave(this.dataset.bookmarkUrl, this)">
-          ${saved ? "★" : "☆"}
-        </button>
-      </a>
-    `;
-  }).join("");
+  grid.innerHTML = results.map(r => _cardHTML(r)).join("");
 }
 
 resultsGrid.addEventListener("click", e => {

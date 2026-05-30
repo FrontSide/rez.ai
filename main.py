@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import secrets
 import uuid
@@ -7,7 +8,7 @@ from urllib.parse import unquote
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from httpx_oauth.clients.google import GoogleOAuth2
 from pydantic import BaseModel
@@ -15,6 +16,7 @@ from pydantic import BaseModel
 from auth import create_token, hash_password, require_user, verify_password
 from database import Recipe, SavedRecipe, SessionLocal, User, init_db
 from scraper import bbc_good_food, gutekueche_at
+import search as es
 
 _GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID", "")
 _GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
@@ -27,6 +29,7 @@ _google = GoogleOAuth2(_GOOGLE_CLIENT_ID, _GOOGLE_CLIENT_SECRET)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    await es.ensure_index()
     yield
 
 
@@ -60,24 +63,37 @@ async def featured_recipes():
 
 @app.get("/api/search")
 async def search_recipes(q: str = Query(..., min_length=1)):
-    bbc_task = asyncio.to_thread(bbc_good_food.search, q)
-    gk_task  = asyncio.to_thread(gutekueche_at.search, q)
-    bbc_res, gk_res = await asyncio.gather(bbc_task, gk_task, return_exceptions=True)
+    async def _stream():
+        # 1. Cached results from ES — returned immediately
+        cached = await es.search(q)
+        if cached:
+            yield f"data: {json.dumps({'results': cached})}\n\n"
 
-    seen: set[str] = set()
-    combined: list[dict] = []
-    for result_list in (bbc_res, gk_res):
-        if isinstance(result_list, Exception):
-            continue
-        for r in result_list:
-            if r["url"] not in seen:
-                seen.add(r["url"])
-                combined.append(r)
+        # 2. Live scraper results — push anything not already in ES
+        seen = {r["url"] for r in cached}
+        bbc_task = asyncio.to_thread(bbc_good_food.search, q)
+        gk_task  = asyncio.to_thread(gutekueche_at.search, q)
+        bbc_res, gk_res = await asyncio.gather(bbc_task, gk_task, return_exceptions=True)
 
-    if not combined:
-        raise HTTPException(status_code=502, detail="Search failed")
+        fresh: list[dict] = []
+        for result_list in (bbc_res, gk_res):
+            if isinstance(result_list, Exception):
+                continue
+            for r in result_list:
+                if r["url"] not in seen:
+                    fresh.append(r)
+                    seen.add(r["url"])
 
-    return {"query": q, "results": combined}
+        if fresh:
+            yield f"data: {json.dumps({'results': fresh})}\n\n"
+
+        yield "event: done\ndata: {}\n\n"
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.get("/api/recipe")
@@ -109,6 +125,7 @@ async def get_recipe(url: str = Query(...)):
         session.add(recipe)
         session.commit()
         session.refresh(recipe)
+        await es.index_recipe(data)
         return _to_dict(recipe, from_cache=False)
 
 
